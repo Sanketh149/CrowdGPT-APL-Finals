@@ -1,7 +1,3 @@
-/**
- * StatusBar — Top bar showing match phase, risk level, active protocol, agent count.
- */
-
 import React from "react";
 import type { MatchPhase, ProtocolLevel, SystemStatus } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -12,21 +8,18 @@ interface Props {
 }
 
 const PHASE_LABELS: Record<MatchPhase, string> = {
-  pre_match: "Pre-Match",
+  pre_match:   "Pre-Match",
   match_start: "Match Start",
-  mid_match: "Mid-Match",
-  match_end: "Match End",
-  post_match: "Post-Match",
+  mid_match:   "Mid-Match",
+  match_end:   "Match End",
+  post_match:  "Post-Match",
 };
 
-const PROTOCOL_CONFIG: Record<
-  ProtocolLevel,
-  { bg: string; text: string; ring: string; label: string }
-> = {
-  NORMAL:   { bg: "bg-emerald-500",  text: "text-emerald-50",  ring: "ring-emerald-400",  label: "NORMAL"   },
-  CAUTION:  { bg: "bg-yellow-500",   text: "text-yellow-50",   ring: "ring-yellow-400",   label: "CAUTION"  },
-  EVACUATE: { bg: "bg-orange-500",   text: "text-orange-50",   ring: "ring-orange-400",   label: "EVACUATE" },
-  LOCKDOWN: { bg: "bg-red-600",      text: "text-red-50",      ring: "ring-red-500",      label: "LOCKDOWN" },
+const PROTOCOL_CONFIG: Record<ProtocolLevel, { bg: string; text: string; ring: string; glow: string; label: string }> = {
+  NORMAL:   { bg: "bg-emerald-500",  text: "text-emerald-50",  ring: "ring-emerald-400",  glow: "shadow-emerald-500/30",  label: "NORMAL"   },
+  CAUTION:  { bg: "bg-yellow-500",   text: "text-yellow-50",   ring: "ring-yellow-400",   glow: "shadow-yellow-500/30",   label: "CAUTION"  },
+  EVACUATE: { bg: "bg-orange-500",   text: "text-orange-50",   ring: "ring-orange-400",   glow: "shadow-orange-500/30",   label: "EVACUATE" },
+  LOCKDOWN: { bg: "bg-red-600",      text: "text-red-50",      ring: "ring-red-500",      glow: "shadow-red-500/40",      label: "LOCKDOWN" },
 };
 
 function RiskGauge({ value }: { value: number }) {
@@ -35,31 +28,20 @@ function RiskGauge({ value }: { value: number }) {
     pct > 75 ? "bg-red-500" : pct > 50 ? "bg-orange-500" : pct > 25 ? "bg-yellow-400" : "bg-emerald-500";
 
   return (
-    <div className="flex items-center gap-2 min-w-[160px]">
-      <span className="text-xs text-gray-400 w-16 shrink-0">Risk Score</span>
-      <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+    <div className="flex items-center gap-2 min-w-[180px]">
+      <span className="text-[10px] text-gray-500 uppercase tracking-wide shrink-0">Risk</span>
+      <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full transition-all duration-500 ${color}`}
+          className={`h-full rounded-full transition-all duration-700 ${color}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="text-xs font-mono font-bold text-white w-8 text-right">{pct}</span>
-    </div>
-  );
-}
-
-function ConnectionDot({ connected }: { connected: boolean }) {
-  return (
-    <span className="flex items-center gap-1.5 text-xs">
-      <span
-        className={`inline-block w-2 h-2 rounded-full ${
-          connected ? "bg-emerald-400 animate-pulse" : "bg-red-500"
-        }`}
-      />
-      <span className={connected ? "text-emerald-400" : "text-red-400"}>
-        {connected ? "Live" : "Offline"}
+      <span className={`text-xs font-mono font-bold w-7 text-right ${
+        pct > 75 ? "text-red-400" : pct > 50 ? "text-orange-400" : pct > 25 ? "text-yellow-400" : "text-emerald-400"
+      }`}>
+        {pct}
       </span>
-    </span>
+    </div>
   );
 }
 
@@ -70,70 +52,86 @@ export function StatusBar({ status, isConnected }: Props) {
   const { user, logout } = useAuth();
 
   return (
-    <header className="w-full bg-gray-900 border-b border-gray-700 px-4 py-2 flex items-center justify-between gap-4">
+    <header
+      className="w-full border-b border-gray-800 px-4 py-0 flex items-stretch"
+      style={{ background: "linear-gradient(135deg, #0f172a 0%, #111827 60%, #0f172a 100%)" }}
+    >
       {/* Left: Branding */}
-      <div className="flex items-center gap-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl" aria-hidden="true">🏟️</span>
+      <div className="flex items-center gap-3 py-2.5 pr-5 border-r border-gray-800">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+            <span className="text-base" aria-hidden="true">🏟️</span>
+          </div>
           <div>
-            <p className="text-white font-bold text-sm leading-tight">CrowdGPT</p>
-            <p className="text-gray-500 text-[10px]">Narendra Modi Stadium · IPL 2026</p>
+            <p className="text-white font-bold text-sm leading-tight tracking-tight">CrowdGPT</p>
+            <p className="text-gray-500 text-[9px] tracking-wider uppercase">Narendra Modi Stadium · IPL 2026</p>
           </div>
         </div>
       </div>
 
-      {/* Centre: Phase + Risk */}
-      <div className="flex items-center gap-6">
-        <div className="text-center">
-          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Match Phase</p>
-          <p className="text-white text-sm font-semibold">{PHASE_LABELS[phase]}</p>
+      {/* Centre: stats */}
+      <div className="flex items-center gap-6 flex-1 px-6">
+        {/* Phase */}
+        <div className="flex flex-col justify-center">
+          <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-0.5">Phase</p>
+          <p className="text-white text-xs font-semibold">{PHASE_LABELS[phase]}</p>
         </div>
 
+        <div className="w-px h-6 bg-gray-800" />
+
+        {/* Risk */}
         <RiskGauge value={status?.overall_risk ?? 0} />
 
-        <div className="text-center">
-          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Active Agents</p>
-          <p className="text-white text-sm font-semibold">{status?.active_agents?.length ?? 7}</p>
+        <div className="w-px h-6 bg-gray-800" />
+
+        {/* Agents */}
+        <div className="flex flex-col justify-center">
+          <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-0.5">Agents</p>
+          <p className="text-white text-xs font-semibold">{status?.active_agents?.length ?? 7} active</p>
+        </div>
+
+        <div className="w-px h-6 bg-gray-800" />
+
+        {/* Last updated */}
+        <div className="flex flex-col justify-center">
+          <p className="text-[9px] text-gray-600 uppercase tracking-widest mb-0.5">Updated</p>
+          <p className="text-gray-400 text-[10px] font-mono">
+            {status?.last_updated ? new Date(status.last_updated).toLocaleTimeString() : "--:--:--"}
+          </p>
         </div>
       </div>
 
-      {/* Right: Protocol badge + connection */}
-      <div className="flex items-center gap-4 shrink-0">
+      {/* Right: Protocol + connection + user */}
+      <div className="flex items-center gap-4 py-2.5 pl-5 border-l border-gray-800">
+        {/* Protocol badge */}
         <div
-          className={`px-3 py-1 rounded-full font-bold text-xs tracking-widest ring-1 ${cfg.bg} ${cfg.text} ${cfg.ring}`}
+          className={`px-3 py-1 rounded-full font-bold text-[11px] tracking-widest ring-1 shadow-md ${cfg.bg} ${cfg.text} ${cfg.ring} ${cfg.glow}`}
           role="status"
-          aria-label={`Emergency protocol: ${cfg.label}`}
         >
           {cfg.label}
         </div>
 
-        <ConnectionDot connected={isConnected} />
-
-        <div className="text-right">
-          <p className="text-[10px] text-gray-500">Last Updated</p>
-          <p className="text-gray-300 text-[10px] font-mono">
-            {status?.last_updated
-              ? new Date(status.last_updated).toLocaleTimeString()
-              : "--:--:--"}
-          </p>
+        {/* Connection */}
+        <div className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`} />
+          <span className={`text-[10px] ${isConnected ? "text-emerald-400" : "text-red-400"}`}>
+            {isConnected ? "Live" : "Offline"}
+          </span>
         </div>
 
+        {/* User */}
         {user && (
-          <div className="flex items-center gap-2 pl-3 border-l border-gray-700">
+          <div className="flex items-center gap-2 pl-3 border-l border-gray-800">
             {user.picture && (
-              <img
-                src={user.picture}
-                alt={user.name}
-                className="w-6 h-6 rounded-full border border-gray-700"
-              />
+              <img src={user.picture} alt={user.name} className="w-6 h-6 rounded-full ring-1 ring-gray-700" />
             )}
-            <span className="text-xs text-gray-400">{user.name}</span>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900 text-blue-300 font-medium">
+            <span className="text-[11px] text-gray-300 font-medium max-w-[100px] truncate">{user.name}</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800 font-bold tracking-wide">
               {user.role}
             </span>
             <button
               onClick={logout}
-              className="text-xs text-gray-600 hover:text-gray-400 transition-colors ml-1"
+              className="text-[10px] text-gray-600 hover:text-gray-300 transition-colors"
             >
               Sign out
             </button>

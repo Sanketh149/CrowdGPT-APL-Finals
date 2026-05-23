@@ -14,6 +14,7 @@ import { AgentFeed } from "./components/AgentFeed";
 import { GateControls } from "./components/GateControls";
 import { AlertPanel } from "./components/AlertPanel";
 import { useAgentStream } from "./hooks/useAgentStream";
+import { VideoFeed } from "./components/VideoFeed";
 import {
   getSystemStatus,
   runOrchestrator,
@@ -198,12 +199,13 @@ function Dashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+    <div className="min-h-screen text-white flex flex-col" style={{ background: "#080e1a" }}>
       {/* Top status bar */}
       <StatusBar status={status} isConnected={isConnected} />
 
       {/* Control bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-800">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800/60"
+        style={{ background: "rgba(15,23,42,0.95)" }}>
         <PhaseSelector currentPhase={phase} onChange={setPhase} />
         <div className="flex items-center gap-3">
           {runError && (
@@ -212,26 +214,36 @@ function Dashboard() {
           <button
             onClick={handleRunOrchestrator}
             disabled={isRunning}
-            className={`text-xs px-4 py-1.5 rounded-lg font-semibold transition-colors ${
+            className={`text-xs px-5 py-1.5 rounded-lg font-semibold transition-all shadow ${
               isRunning
                 ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                : "bg-blue-700 hover:bg-blue-600 text-white"
+                : "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30"
             }`}
           >
-            {isRunning ? "Running..." : "Run Agent Cycle"}
+            {isRunning ? (
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                Running...
+              </span>
+            ) : "▶ Run Agent Cycle"}
           </button>
         </div>
       </div>
 
       {/* Main content grid */}
-      <main className="flex-1 grid grid-cols-12 gap-3 p-3 min-h-0">
-        {/* Left column: Stadium Map (full height on large screens) */}
-        <section className="col-span-12 lg:col-span-5 xl:col-span-5">
-          <StadiumMap zones={zones} />
+      <main className="flex-1 grid grid-cols-12 gap-2.5 p-2.5 min-h-0">
+        {/* Left column: Video Feed + Stadium Map stacked */}
+        <section className="col-span-12 lg:col-span-5 xl:col-span-5 flex flex-col gap-2.5">
+          <div className="flex-[2] min-h-0">
+            <VideoFeed zones={zones} />
+          </div>
+          <div className="flex-[3] min-h-0">
+            <StadiumMap zones={zones} />
+          </div>
         </section>
 
         {/* Middle column: Agent Feed */}
-        <section className="col-span-12 lg:col-span-4 xl:col-span-4 h-[500px] lg:h-auto">
+        <section className="col-span-12 lg:col-span-4 xl:col-span-4 h-[600px] lg:h-auto">
           <AgentFeed
             decisions={decisions}
             isConnected={isConnected}
@@ -240,7 +252,7 @@ function Dashboard() {
         </section>
 
         {/* Right column: Gate Controls + Alerts */}
-        <section className="col-span-12 lg:col-span-3 xl:col-span-3 flex flex-col gap-3 h-[500px] lg:h-auto">
+        <section className="col-span-12 lg:col-span-3 xl:col-span-3 flex flex-col gap-2.5 h-[600px] lg:h-auto">
           <div className="flex-1 min-h-0">
             <GateControls gates={gates} onGateChange={handleGateChange} />
           </div>

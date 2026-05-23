@@ -120,7 +120,7 @@ export function GateControls({ gates, onGateChange }: Props) {
     setError(null);
     try {
       await overrideGate({ gate_id: gateId, action });
-      onGateChange?.(gateId, action);
+      onGateChange?.(gateId, action === "open" ? "open" : "closed");
     } catch (err) {
       setError(`Failed to ${action} ${gateId}: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
