@@ -198,7 +198,7 @@ function Dashboard() {
   }, []);
 
   return (
-    <div className="min-h-screen text-white flex flex-col" style={{ background: "#080e1a" }}>
+    <div className="h-screen text-white flex flex-col overflow-hidden" style={{ background: "#080e1a" }}>
       {/* Top status bar */}
       <StatusBar status={status} isConnected={isConnected} />
 
@@ -230,7 +230,7 @@ function Dashboard() {
       </div>
 
       {/* Main content grid */}
-      <main className="flex-1 grid grid-cols-12 gap-2.5 p-2.5 min-h-0" style={{ gridTemplateRows: "1fr" }}>
+      <main className="flex-1 grid grid-cols-12 gap-2.5 p-2.5 overflow-hidden" style={{ gridTemplateRows: "1fr" }}>
         {/* Left column: Live Panel (Live Feed / Stadium Map / YOLO toggle) */}
         <section className="col-span-12 lg:col-span-5 xl:col-span-5 h-[640px] lg:h-full">
           <LivePanel zones={zones} />

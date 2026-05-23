@@ -9,6 +9,7 @@ import type { Zone } from "../types";
 interface Props {
   zones: Zone[];
   onZoneClick?: (zone: Zone) => void;
+  fillHeight?: boolean;
 }
 
 // SVG viewport dimensions
@@ -137,11 +138,11 @@ function ZoneCell({
   );
 }
 
-export function StadiumMap({ zones, onZoneClick }: Props) {
+export function StadiumMap({ zones, onZoneClick, fillHeight }: Props) {
   const zoneMap = Object.fromEntries(zones.map((z) => [z.zone_id, z]));
 
   return (
-    <div className="bg-gray-800 rounded-xl p-3 border border-gray-700">
+    <div className={`bg-gray-800 rounded-xl p-3 border border-gray-700 ${fillHeight ? "h-full flex flex-col" : ""}`}>
       <div className="flex items-center justify-between mb-2 px-1">
         <h2 className="text-sm font-semibold text-white">Live Stadium Map</h2>
         {/* Legend */}
@@ -166,7 +167,7 @@ export function StadiumMap({ zones, onZoneClick }: Props) {
       <svg
         viewBox={`0 0 ${SVG_W} ${SVG_H}`}
         width="100%"
-        className="max-h-[380px]"
+        className={fillHeight ? "flex-1 h-full" : "max-h-[380px]"}
         aria-label="Stadium crowd density map"
       >
         {/* Background */}
