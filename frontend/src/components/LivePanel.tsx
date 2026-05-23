@@ -6,29 +6,34 @@ interface Props {
   zones: Zone[];
 }
 
-type View = "live" | "stadium" | "yolo";
+type View = "stadium" | "internal" | "passthrough" | "gates" | "yolo";
 
-// Replace with any YouTube video ID of IPL crowd footage
-const YT_VIDEO_ID = "VV3mTfKGKYI";
+const GCS = "https://storage.googleapis.com/crowdgpt-media-2026/videos";
+
+const VIDEOS = {
+  internal_1:   `${GCS}/internal_stadium_1.mp4`,
+  internal_2:   `${GCS}/internal_stadium_2.mp4`,
+  passthrough:  `${GCS}/passthrough.mp4`,
+  gate_1:       `${GCS}/gate_1.mp4`,
+  gate_2:       `${GCS}/gate_2_video.mp4`,
+};
 
 // ── YOLO Canvas ────────────────────────────────────────────────────────────
 
 interface Person {
   x: number; y: number;
   vx: number; vy: number;
-  zone: string;
-  size: number;
-  wobble: number;
-  wobbleSpeed: number;
+  zone: string; size: number;
+  wobble: number; wobbleSpeed: number;
 }
 
-const ZONE_LAYOUT: Record<string, { x: number; y: number; w: number; h: number }> = {
-  north_stand:  { x: 148, y: 6,   w: 204, h: 56  },
-  south_stand:  { x: 148, y: 258, w: 204, h: 56  },
-  east_stand:   { x: 432, y: 74,  w: 76,  h: 152 },
-  west_stand:   { x: 8,   y: 74,  w: 76,  h: 152 },
-  vip_pavilion: { x: 90,  y: 102, w: 74,  h: 100 },
-  media_center: { x: 346, y: 102, w: 74,  h: 100 },
+const ZONE_LAYOUT: Record<string, { x: number; y: number; w: number; h: number; label: string }> = {
+  north_stand:  { x: 148, y: 6,   w: 204, h: 56,  label: "North Stand"  },
+  south_stand:  { x: 148, y: 258, w: 204, h: 56,  label: "South Stand"  },
+  east_stand:   { x: 432, y: 74,  w: 76,  h: 152, label: "East Stand"   },
+  west_stand:   { x: 8,   y: 74,  w: 76,  h: 152, label: "West Stand"   },
+  vip_pavilion: { x: 90,  y: 102, w: 74,  h: 100, label: "VIP"          },
+  media_center: { x: 346, y: 102, w: 74,  h: 100, label: "Media"        },
 };
 
 function densityRGB(pct: number): [number, number, number] {
@@ -69,17 +74,13 @@ function YoloCanvas({ zones }: { zones: Zone[] }) {
   const zonesRef = useRef(zones);
 
   useEffect(() => { zonesRef.current = zones; }, [zones]);
-
-  useEffect(() => {
-    personsRef.current = buildPersons(zones);
-  }, []); // eslint-disable-line
+  useEffect(() => { personsRef.current = buildPersons(zones); }, []); // eslint-disable-line
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-
     const CW = canvas.width, CH = canvas.height;
     const sx = CW / 516, sy = CH / 320;
 
@@ -87,7 +88,6 @@ function YoloCanvas({ zones }: { zones: Zone[] }) {
       const f = frameRef.current++;
       const zoneMap = Object.fromEntries(zonesRef.current.map((z) => [z.zone_id, z]));
 
-      // Background
       ctx.fillStyle = "#06101c";
       ctx.fillRect(0, 0, CW, CH);
       for (let y = 0; y < CH; y += 3) {
@@ -95,7 +95,6 @@ function YoloCanvas({ zones }: { zones: Zone[] }) {
         ctx.fillRect(0, y, CW, 1);
       }
 
-      // Zone heatmap
       Object.entries(ZONE_LAYOUT).forEach(([zoneId, l]) => {
         const z = zoneMap[zoneId];
         const pct = z?.capacity_pct ?? 0;
@@ -108,7 +107,6 @@ function YoloCanvas({ zones }: { zones: Zone[] }) {
         ctx.beginPath();
         ctx.roundRect(x, y, w, h, 4);
         ctx.fill();
-        // YOLO zone box
         ctx.strokeStyle = `rgba(${r},${g},${b},${0.5+pct*0.3})`;
         ctx.lineWidth = 0.8;
         ctx.setLineDash([4, 3]);
@@ -117,31 +115,29 @@ function YoloCanvas({ zones }: { zones: Zone[] }) {
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = `rgba(${r},${g},${b},0.95)`;
-        ctx.font = `bold ${6.5}px monospace`;
+        ctx.font = `bold 6.5px monospace`;
         ctx.textAlign = "right";
         ctx.fillText(`${(pct*100).toFixed(0)}%`, x+w-3, y+h-3);
+        // Zone label
+        ctx.fillStyle = "rgba(255,255,255,0.6)";
+        ctx.font = `5.5px monospace`;
+        ctx.textAlign = "center";
+        ctx.fillText(l.label, x+w/2, y+10);
       });
 
-      // Outfield
+      // Outfield + pitch
       ctx.fillStyle = "rgba(12,60,28,0.55)";
       ctx.beginPath();
       ctx.ellipse(258*sx, 160*sy, 82*sx, 62*sy, 0, 0, Math.PI*2);
       ctx.fill();
       ctx.strokeStyle = "rgba(22,163,74,0.25)";
-      ctx.lineWidth = 0.7;
-      ctx.setLineDash([5,4]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      // Pitch
+      ctx.lineWidth = 0.7; ctx.setLineDash([5,4]); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = "rgba(21,128,61,0.85)";
       ctx.beginPath();
       ctx.ellipse(258*sx, 160*sy, 42*sx, 30*sy, 0, 0, Math.PI*2);
       ctx.fill();
-      ctx.strokeStyle = "rgba(34,197,94,0.35)";
-      ctx.lineWidth = 0.6;
-      ctx.stroke();
 
-      // Persons + YOLO boxes
+      // Persons
       const persons = personsRef.current;
       persons.forEach((p, idx) => {
         const l = ZONE_LAYOUT[p.zone];
@@ -149,123 +145,150 @@ function YoloCanvas({ zones }: { zones: Zone[] }) {
         p.wobble += p.wobbleSpeed;
         p.x += p.vx + Math.sin(p.wobble) * 0.03;
         p.y += p.vy + Math.cos(p.wobble * 0.7) * 0.025;
-        if (p.x < l.x+2) { p.x = l.x+2; p.vx = Math.abs(p.vx); }
-        if (p.x > l.x+l.w-2) { p.x = l.x+l.w-2; p.vx = -Math.abs(p.vx); }
-        if (p.y < l.y+2) { p.y = l.y+2; p.vy = Math.abs(p.vy); }
-        if (p.y > l.y+l.h-2) { p.y = l.y+l.h-2; p.vy = -Math.abs(p.vy); }
+        if (p.x < l.x+2) { p.x=l.x+2; p.vx=Math.abs(p.vx); }
+        if (p.x > l.x+l.w-2) { p.x=l.x+l.w-2; p.vx=-Math.abs(p.vx); }
+        if (p.y < l.y+2) { p.y=l.y+2; p.vy=Math.abs(p.vy); }
+        if (p.y > l.y+l.h-2) { p.y=l.y+l.h-2; p.vy=-Math.abs(p.vy); }
         const z = zoneMap[p.zone];
         const pct = z?.capacity_pct ?? 0;
         const [r, g, b] = densityRGB(pct);
-        const px = p.x * sx, py = p.y * sy;
+        const px = p.x*sx, py = p.y*sy;
         ctx.beginPath();
         ctx.arc(px, py, p.size, 0, Math.PI*2);
         ctx.fillStyle = `rgba(${r},${g},${b},0.9)`;
         ctx.fill();
-        // Detection box cycling
-        const slot1 = Math.floor((f*0.4 + idx*6.7) % persons.length);
-        const slot2 = Math.floor((f*0.4 + idx*6.7 + 19) % persons.length);
-        const slot3 = Math.floor((f*0.4 + idx*6.7 + 43) % persons.length);
-        if (idx === slot1 || idx === slot2 || idx === slot3) {
-          const bw = p.size * 6 * sx, bh = p.size * 9 * sy;
-          ctx.strokeStyle = "rgba(34,211,238,0.82)";
-          ctx.lineWidth = 0.7;
+        const s1 = Math.floor((f*0.4+idx*6.7)%persons.length);
+        const s2 = Math.floor((f*0.4+idx*6.7+19)%persons.length);
+        const s3 = Math.floor((f*0.4+idx*6.7+43)%persons.length);
+        if (idx===s1||idx===s2||idx===s3) {
+          const bw=p.size*6*sx, bh=p.size*9*sy;
+          ctx.strokeStyle="rgba(34,211,238,0.82)"; ctx.lineWidth=0.7;
           ctx.strokeRect(px-bw/2, py-bh*0.6, bw, bh);
-          const conf = 0.77 + Math.sin(f*0.03+idx) * 0.13;
-          ctx.fillStyle = "rgba(34,211,238,0.9)";
-          ctx.font = `5px monospace`;
-          ctx.textAlign = "left";
+          const conf = 0.77+Math.sin(f*0.03+idx)*0.13;
+          ctx.fillStyle="rgba(34,211,238,0.9)"; ctx.font="5px monospace"; ctx.textAlign="left";
           ctx.fillText(`${conf.toFixed(2)}`, px-bw/2+1, py-bh*0.6-1.5);
         }
       });
 
       // Corner brackets
-      const bs = 10;
-      ctx.strokeStyle = "rgba(34,211,238,0.4)";
-      ctx.lineWidth = 1.2;
-      [[0,0],[CW,0],[0,CH],[CW,CH]].forEach(([cx,cy], i) => {
-        const dx = i%2===0?1:-1, dy = i<2?1:-1;
-        ctx.beginPath();
-        ctx.moveTo(cx+dx*bs, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy+dy*bs);
-        ctx.stroke();
+      ctx.strokeStyle="rgba(34,211,238,0.4)"; ctx.lineWidth=1.2;
+      [[0,0],[CW,0],[0,CH],[CW,CH]].forEach(([cx,cy],i) => {
+        const dx=i%2===0?1:-1, dy=i<2?1:-1;
+        ctx.beginPath(); ctx.moveTo(cx+dx*10,cy); ctx.lineTo(cx,cy); ctx.lineTo(cx,cy+dy*10); ctx.stroke();
       });
 
-      // Stats bar
-      ctx.fillStyle = "rgba(0,0,0,0.65)";
-      ctx.fillRect(0, CH-15, CW, 15);
-      ctx.fillStyle = "rgba(34,211,238,0.7)";
-      ctx.font = `5.8px monospace`;
-      ctx.textAlign = "left";
+      // Bottom stats
+      ctx.fillStyle="rgba(0,0,0,0.65)"; ctx.fillRect(0,CH-15,CW,15);
+      ctx.fillStyle="rgba(34,211,238,0.7)"; ctx.font="5.8px monospace"; ctx.textAlign="left";
       ctx.fillText(`YOLOv8n · ${persons.length} detections · ${(29.5+Math.sin(f*0.02)*0.5).toFixed(1)}fps`, 5, CH-5);
 
       // LIVE
-      const pulse = Math.sin(f*0.07) > 0;
-      ctx.fillStyle = "rgba(0,0,0,0.55)";
-      ctx.fillRect(5, 5, 42, 13);
-      ctx.beginPath();
-      ctx.arc(11, 11, 3, 0, Math.PI*2);
-      ctx.fillStyle = pulse ? "rgba(239,68,68,1)" : "rgba(239,68,68,0.35)";
-      ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.font = `bold 6px sans-serif`;
-      ctx.textAlign = "left";
+      const pulse = Math.sin(f*0.07)>0;
+      ctx.fillStyle="rgba(0,0,0,0.55)"; ctx.fillRect(5,5,42,13);
+      ctx.beginPath(); ctx.arc(11,11,3,0,Math.PI*2);
+      ctx.fillStyle=pulse?"rgba(239,68,68,1)":"rgba(239,68,68,0.35)"; ctx.fill();
+      ctx.fillStyle="rgba(255,255,255,0.85)"; ctx.font="bold 6px sans-serif"; ctx.textAlign="left";
       ctx.fillText("LIVE", 16, 14);
 
       animRef.current = requestAnimationFrame(render);
     };
-
     animRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animRef.current);
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={900}
-      height={560}
-      className="w-full h-full"
-      style={{ display: "block" }}
-    />
+    <canvas ref={canvasRef} width={900} height={560} className="w-full h-full" style={{ display: "block" }} />
   );
 }
 
-// ── Main LivePanel ─────────────────────────────────────────────────────────
+// ── Video Player ────────────────────────────────────────────────────────────
 
-const VIEW_BUTTONS: { id: View; label: string; icon: string }[] = [
-  { id: "live",    label: "Live Feed",   icon: "📹" },
-  { id: "stadium", label: "Stadium Map", icon: "🏟️" },
-  { id: "yolo",    label: "YOLO View",   icon: "🤖" },
+function VideoPlayer({ src, label, camId }: { src: string; label: string; camId: string }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  return (
+    <div className="relative w-full h-full bg-black">
+      <video
+        ref={videoRef}
+        src={src}
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="w-full h-full object-cover"
+      />
+      <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded">
+        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+        <span className="text-white text-[10px] font-bold tracking-wider">LIVE · {camId}</span>
+      </div>
+      <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-0.5 rounded">
+        <span className="text-gray-300 text-[10px]">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Split Gate View ─────────────────────────────────────────────────────────
+
+function GateView() {
+  return (
+    <div className="w-full h-full flex flex-col gap-0.5 bg-black">
+      <div className="flex-1 relative">
+        <VideoPlayer src={VIDEOS.gate_1} label="Gate Entrance — North Entry" camId="GATE-01" />
+      </div>
+      <div className="flex-1 relative">
+        <VideoPlayer src={VIDEOS.gate_2} label="Gate Entrance — South Entry" camId="GATE-02" />
+      </div>
+    </div>
+  );
+}
+
+// ── View Config ─────────────────────────────────────────────────────────────
+
+const VIEW_BUTTONS: { id: View; icon: string; label: string }[] = [
+  { id: "stadium",     icon: "🏟️", label: "Stadium Map"  },
+  { id: "internal",    icon: "📷", label: "Internal"      },
+  { id: "passthrough", icon: "🚶", label: "Passthrough"   },
+  { id: "gates",       icon: "🚪", label: "Gates"         },
+  { id: "yolo",        icon: "🤖", label: "YOLO"          },
 ];
+
+// ── Main Component ──────────────────────────────────────────────────────────
 
 export function LivePanel({ zones }: Props) {
   const [view, setView] = useState<View>("stadium");
 
-  return (
-    <div className="rounded-xl border border-gray-700 flex flex-col h-full overflow-hidden"
-      style={{ background: "#0d1420" }}>
+  const headerLabel: Record<View, string> = {
+    stadium:     "Stadium Capacity Map",
+    internal:    "Internal Stadium — Live Camera",
+    passthrough: "Passthrough — Ticket Verification",
+    gates:       "Gate Cameras — Entry Points",
+    yolo:        "YOLO Detection View",
+  };
 
-      {/* Header with toggle buttons */}
+  const isLive = view !== "stadium";
+
+  return (
+    <div className="rounded-xl border border-gray-700 flex flex-col h-full overflow-hidden" style={{ background: "#0d1420" }}>
+      {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700/60 shrink-0">
         <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${view === "live" || view === "yolo" ? "bg-red-500 animate-pulse" : "bg-blue-500"}`} />
-          <h2 className="text-sm font-semibold text-white">
-            {view === "live" ? "Live Camera Feed" : view === "stadium" ? "Stadium Capacity Map" : "YOLO Detection"}
-          </h2>
+          <span className={`w-2 h-2 rounded-full ${isLive ? "bg-red-500 animate-pulse" : "bg-blue-500"}`} />
+          <h2 className="text-sm font-semibold text-white">{headerLabel[view]}</h2>
         </div>
-
-        {/* Toggle buttons */}
-        <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-0.5">
+        {/* Toggle tabs */}
+        <div className="flex items-center gap-0.5 bg-gray-800/80 rounded-lg p-0.5">
           {VIEW_BUTTONS.map((btn) => (
             <button
               key={btn.id}
               onClick={() => setView(btn.id)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all ${
                 view === btn.id
                   ? "bg-blue-600 text-white shadow"
-                  : "text-gray-400 hover:text-gray-200"
+                  : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
               }`}
             >
               <span>{btn.icon}</span>
-              {btn.label}
+              <span className="hidden sm:inline">{btn.label}</span>
             </button>
           ))}
         </div>
@@ -273,30 +296,25 @@ export function LivePanel({ zones }: Props) {
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
-        {view === "live" && (
-          <div className="w-full h-full bg-black relative">
-            <iframe
-              src={`https://www.youtube.com/embed/${YT_VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${YT_VIDEO_ID}&controls=0&modestbranding=1&rel=0`}
-              className="w-full h-full"
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              title="Live Camera Feed"
-              style={{ border: "none" }}
-            />
-            {/* Overlay badge */}
-            <div className="absolute top-3 left-3 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-white text-[10px] font-bold tracking-wider">LIVE · CAM-01</span>
-            </div>
-          </div>
-        )}
-
         {view === "stadium" && (
           <div className="w-full h-full overflow-auto p-2">
             <StadiumMap zones={zones} />
           </div>
         )}
-
+        {view === "internal" && (
+          <div className="w-full h-full flex gap-0.5 bg-black">
+            <div className="flex-1">
+              <VideoPlayer src={VIDEOS.internal_1} label="Internal Overview — Stand A" camId="INT-01" />
+            </div>
+            <div className="flex-1">
+              <VideoPlayer src={VIDEOS.internal_2} label="Internal Overview — Stand B" camId="INT-02" />
+            </div>
+          </div>
+        )}
+        {view === "passthrough" && (
+          <VideoPlayer src={VIDEOS.passthrough} label="Ticket Verification — Main Entry" camId="PASS-01" />
+        )}
+        {view === "gates" && <GateView />}
         {view === "yolo" && (
           <div className="w-full h-full bg-black">
             <YoloCanvas zones={zones} />
