@@ -13,6 +13,7 @@ import google.generativeai as genai
 from google.adk.agents import LlmAgent
 
 from tools.sensor_tools import get_zone_density_tool, get_historical_density_tool
+from agents.gemini_client import call_gemini
 
 logger = logging.getLogger(__name__)
 
@@ -109,15 +110,12 @@ class CrowdDensityAgent:
             )
             decision_text = f"Peak density {peak_density:.1%} — {len(hotspots)} hotspot(s) detected"
             if self._gemini:
-                try:
-                    prompt = (
-                        f"Analyze this stadium crowd density data and give a 1-2 sentence operator decision:\n"
-                        f"{zone_data_summary}"
-                    )
-                    response = await self._gemini.generate_content_async(prompt)
-                    decision_text = response.text.strip()
-                except Exception as e:
-                    logger.warning(f"Gemini call failed in CrowdDensityAgent: {e}")
+                result = await call_gemini(
+                    f"Analyze this stadium crowd density data and give a 1-2 sentence operator decision:\n{zone_data_summary}",
+                    model=self.model,
+                )
+                if result:
+                    decision_text = result
 
             return {
                 "agent": "crowd_density",

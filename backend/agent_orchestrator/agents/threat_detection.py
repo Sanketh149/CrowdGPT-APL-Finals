@@ -14,6 +14,7 @@ import google.generativeai as genai
 from google.adk.agents import LlmAgent
 
 from tools.sensor_tools import get_zone_density_tool
+from agents.gemini_client import call_gemini
 
 logger = logging.getLogger(__name__)
 
@@ -144,24 +145,18 @@ class ThreatDetectionAgent:
 
         # Call Gemini for threat assessment
         if self._gemini:
-            try:
-                anomaly_desc = "; ".join(
-                    f"{a['type']} in {a['zone']}" for a in anomalies
-                ) or "none"
-                top_factors_desc = ", ".join(
-                    f"{f['factor']}={f['score']}" for f in top_factors
-                )
-                prompt = (
-                    f"You are a crowd safety threat analyst. Risk score: {risk_score}/100, "
-                    f"level: {risk_level}. Anomalies: {anomaly_desc}. "
-                    f"Top factors: {top_factors_desc}. "
-                    f"Write a 2-3 sentence threat assessment for the operator."
-                )
-                response = await self._gemini.generate_content_async(prompt)
-                threat_summary = response.text.strip()
-                decision_text = threat_summary
-            except Exception as e:
-                logger.warning(f"Gemini call failed in ThreatDetectionAgent: {e}")
+            anomaly_desc = "; ".join(f"{a['type']} in {a['zone']}" for a in anomalies) or "none"
+            top_factors_desc = ", ".join(f"{f['factor']}={f['score']}" for f in top_factors)
+            result = await call_gemini(
+                f"You are a crowd safety threat analyst. Risk score: {risk_score}/100, "
+                f"level: {risk_level}. Anomalies: {anomaly_desc}. "
+                f"Top factors: {top_factors_desc}. "
+                f"Write a 2-3 sentence threat assessment for the operator.",
+                model=self.model,
+            )
+            if result:
+                threat_summary = result
+                decision_text = result
 
         return {
             "agent": "threat_detection",

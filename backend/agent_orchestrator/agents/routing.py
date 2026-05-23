@@ -13,6 +13,7 @@ import google.generativeai as genai
 from google.adk.agents import LlmAgent
 
 from tools.gate_control import open_gate_tool, close_gate_tool, get_gate_status_tool
+from agents.gemini_client import call_gemini
 
 logger = logging.getLogger(__name__)
 
@@ -100,17 +101,15 @@ class RoutingAgent:
 
         # Call Gemini to validate and enrich routing rationale
         if self._gemini:
-            try:
-                prompt = (
-                    f"You are a crowd routing expert. Given hotspots={hotspots}, "
-                    f"bottlenecks={bottleneck_gates}, peak_density={peak_density:.1%}. "
-                    f"These gate actions are proposed: {gate_actions}. "
-                    f"Validate and give a 1-2 sentence routing rationale."
-                )
-                response = await self._gemini.generate_content_async(prompt)
-                rationale = response.text.strip()
-            except Exception as e:
-                logger.warning(f"Gemini call failed in RoutingAgent: {e}")
+            result = await call_gemini(
+                f"You are a crowd routing expert. Given hotspots={hotspots}, "
+                f"bottlenecks={bottleneck_gates}, peak_density={peak_density:.1%}. "
+                f"These gate actions are proposed: {gate_actions}. "
+                f"Validate and give a 1-2 sentence routing rationale.",
+                model=self.model,
+            )
+            if result:
+                rationale = result
 
         return {
             "agent": "routing",

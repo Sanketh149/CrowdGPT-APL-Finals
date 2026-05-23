@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from google.adk.agents import LlmAgent
 
 from tools.alert_tools import dispatch_alert_tool, get_active_alerts_tool
+from agents.gemini_client import call_gemini
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -208,10 +209,9 @@ class NotifierAgent:
                     f"Gate actions: {gate_text}\n"
                     f"Be factual, urgent if warranted, and actionable."
                 )
-                response = await self._gemini.generate_content_async(prompt)
-                return response.text.strip()
-            except Exception as e:
-                logger.warning(f"Gemini message generation failed: {e}")
+                result = await call_gemini(prompt, model=self.model)
+                if result:
+                    return result
 
         # Fallback template
         return (

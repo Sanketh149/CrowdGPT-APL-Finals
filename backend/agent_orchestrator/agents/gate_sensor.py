@@ -15,6 +15,7 @@ from google.adk.agents import LlmAgent
 
 from tools.sensor_tools import get_zone_density_tool
 from tools.gate_control import get_gate_status_tool
+from agents.gemini_client import call_gemini
 
 logger = logging.getLogger(__name__)
 
@@ -121,17 +122,15 @@ class GateSensorAgent:
 
             # Call Gemini for a routing recommendation
             if self._gemini:
-                try:
-                    prompt = (
-                        f"You are a stadium gate analyst. Given these gate readings: "
-                        f"bottlenecks={bottlenecks}, underutilised={underutilised}, "
-                        f"total_inflow={total_inflow}ppm. "
-                        f"Give a 1-2 sentence routing recommendation."
-                    )
-                    response = await self._gemini.generate_content_async(prompt)
-                    recommendation = response.text.strip()
-                except Exception as e:
-                    logger.warning(f"Gemini call failed in GateSensorAgent: {e}")
+                result = await call_gemini(
+                    f"You are a stadium gate analyst. Given these gate readings: "
+                    f"bottlenecks={bottlenecks}, underutilised={underutilised}, "
+                    f"total_inflow={total_inflow}ppm. "
+                    f"Give a 1-2 sentence routing recommendation.",
+                    model=self.model,
+                )
+                if result:
+                    recommendation = result
 
             decision_text = (
                 f"{len(bottlenecks)} bottleneck(s) detected — "

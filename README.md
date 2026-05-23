@@ -34,36 +34,32 @@ Operators need an integrated, AI-driven command platform that unifies crowd moni
 
 ### Agent Hierarchy
 
+![CrowdGPT Agent Architecture](Final_Flow_Diagram.png)
+
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                       ORCHESTRATOR AGENT                         │
-│                  (Google ADK — Gemini 2.5 Flash)                 │
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │                 ParallelAgent — Monitoring                  │  │
-│  │                                                            │  │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐  │  │
-│  │  │ Crowd Density│  │ Gate Sensor  │  │ Weather Context │  │  │
-│  │  │    Agent     │  │    Agent     │  │     Agent       │  │  │
-│  │  └──────┬───────┘  └──────┬───────┘  └───────┬─────────┘  │  │
-│  └─────────┼─────────────────┼──────────────────┼────────────┘  │
-│            └─────────────────┴──────────────────┘               │
-│                              │ threshold breach (density > 65%)  │
-│            ┌─────────────────▼────────────────────────────┐     │
-│            │        SequentialAgent — Response Chain        │     │
-│            │                                               │     │
-│            │  [1] Routing Agent     → Gate commands        │     │
-│            │  [2] Threat Detection  → Risk score 0-100     │     │
-│            │  [3] Emergency Protocol→ Playbook activation  │     │
-│            │  [4] Notifier Agent    → SendGrid email alerts│     │
-│            └───────────────────────────────────────────────┘     │
-└──────────────────────────────┬───────────────────────────────────┘
-                               │  SSE stream
-                               ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                      OPERATOR DASHBOARD                          │
-│  Stadium Heatmap │ YOLOv8+LSTM │ Agent Feed │ Gate Controls      │
-└──────────────────────────────────────────────────────────────────┘
+ORCHESTRATOR AGENT  (Google ADK - Gemini 2.5 Flash)
+        |
+        +--[ ParallelAgent: Monitoring ]---------------------+
+        |   Crowd Density Agent                              |
+        |   Gate Sensor Agent                                |
+        |   Weather Context Agent                            |
+        +----------------------------------------------------+
+                        |
+              threshold breach (density > 65%)
+                        |
+        +--[ SequentialAgent: Response Chain ]---------------+
+        |   [1] Routing Agent       -> Gate commands         |
+        |   [2] Threat Detection    -> Risk score 0-100      |
+        |   [3] Emergency Protocol  -> Playbook activation   |
+        |   [4] Notifier Agent      -> SendGrid email alerts |
+        +----------------------------------------------------+
+                        |
+                    SSE stream
+                        |
+        +--[ Operator Dashboard ]----------------------------+
+        |   Stadium Heatmap | YOLOv8+LSTM                   |
+        |   Agent Feed      | Gate Controls                  |
+        +----------------------------------------------------+
 ```
 
 ### Agent Responsibilities

@@ -14,6 +14,7 @@ from google.adk.agents import LlmAgent
 
 from tools.alert_tools import dispatch_alert_tool, get_active_alerts_tool
 from tools.gate_control import open_gate_tool
+from agents.gemini_client import call_gemini
 
 logger = logging.getLogger(__name__)
 
@@ -166,25 +167,21 @@ class EmergencyProtocolAgent:
 
         # Call Gemini to generate contextual PA and staff instructions
         if self._gemini:
-            try:
-                prompt = (
-                    f"You are an emergency coordinator. Protocol: {protocol}, "
-                    f"risk score: {risk_score}/100, zones affected: {zones_affected}. "
-                    f"Write: 1) a 1-sentence public PA announcement (calm, clear), "
-                    f"2) a 1-sentence field staff instruction. "
-                    f"Format: PA: ...\nSTAFF: ..."
-                )
-                response = await self._gemini.generate_content_async(prompt)
-                response_text = response.text.strip()
-                # Parse PA and STAFF lines
-                for line in response_text.splitlines():
+            result = await call_gemini(
+                f"You are an emergency coordinator. Protocol: {protocol}, "
+                f"risk score: {risk_score}/100, zones affected: {zones_affected}. "
+                f"Write: 1) a 1-sentence public PA announcement (calm, clear), "
+                f"2) a 1-sentence field staff instruction. "
+                f"Format: PA: ...\nSTAFF: ...",
+                model=self.model,
+            )
+            if result:
+                for line in result.splitlines():
                     line = line.strip()
                     if line.upper().startswith("PA:"):
                         activation_record["public_announcement"] = line[3:].strip()
                     elif line.upper().startswith("STAFF:"):
                         activation_record["staff_instructions"] = line[6:].strip()
-            except Exception as e:
-                logger.warning(f"Gemini call failed in EmergencyProtocolAgent: {e}")
 
         logger.info(
             f"Emergency protocol activated: {protocol} (risk={risk_score}, "
