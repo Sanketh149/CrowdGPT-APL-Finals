@@ -88,11 +88,13 @@ class NotifierAgent:
         )
         alerts.append(
             {
-                "id": f"OPS-{timestamp[:19].replace(':', '').replace('-', '')}",
+                "alert_id": f"OPS-{timestamp[:19].replace(':', '').replace('-', '')}",
                 "severity": severity,
                 "channel": "operator",
                 "message": operator_msg,
                 "timestamp": timestamp,
+                "zone_id": None,
+                "acknowledged": False,
                 "actions_required": self._operator_actions(protocol, gate_actions),
             }
         )
@@ -102,11 +104,13 @@ class NotifierAgent:
             staff_msg = self._generate_staff_message(emergency_meta)
             alerts.append(
                 {
-                    "id": f"STAFF-{timestamp[:19].replace(':', '').replace('-', '')}",
+                    "alert_id": f"STAFF-{timestamp[:19].replace(':', '').replace('-', '')}",
                     "severity": severity,
                     "channel": "field_staff",
                     "message": staff_msg,
                     "timestamp": timestamp,
+                    "zone_id": None,
+                    "acknowledged": False,
                     "actions_required": [emergency_meta.get("staff_instructions", "")],
                 }
             )
@@ -115,11 +119,13 @@ class NotifierAgent:
         if protocol in ("EVACUATE", "LOCKDOWN"):
             alerts.append(
                 {
-                    "id": f"PA-{timestamp[:19].replace(':', '').replace('-', '')}",
+                    "alert_id": f"PA-{timestamp[:19].replace(':', '').replace('-', '')}",
                     "severity": "CRITICAL",
                     "channel": "public_pa",
                     "message": emergency_meta.get("public_announcement", ""),
                     "timestamp": timestamp,
+                    "zone_id": None,
+                    "acknowledged": False,
                     "actions_required": ["Broadcast via stadium PA system immediately"],
                 }
             )

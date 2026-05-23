@@ -271,8 +271,8 @@ async def acknowledge_alert(alert_id: str, acknowledged_by: str = "operator"):
 
 @app.post("/gate/{gate_id}/override")
 async def override_gate(gate_id: str, action: str, request: Request):
-    """Manual gate override — SUPER_ADMIN only."""
-    user = require_super_admin(request)
+    """Manual gate override — any authenticated user."""
+    user = get_current_user(request)
     if action not in ("open", "close"):
         raise HTTPException(status_code=400, detail="action must be 'open' or 'close'")
     result = await orchestrator.override_gate(gate_id=gate_id, action=action)
