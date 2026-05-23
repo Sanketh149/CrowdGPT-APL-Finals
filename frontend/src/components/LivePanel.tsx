@@ -6,7 +6,7 @@ interface Props {
   zones: Zone[];
 }
 
-type View = "stadium" | "internal" | "passthrough" | "gates" | "yolo";
+type View = "split" | "stadium" | "internal" | "passthrough" | "gates" | "yolo";
 
 const GCS = "https://storage.googleapis.com/crowdgpt-media-2026/videos";
 
@@ -179,7 +179,7 @@ function YoloCanvas({ zones }: { zones: Zone[] }) {
       // Bottom stats
       ctx.fillStyle="rgba(0,0,0,0.65)"; ctx.fillRect(0,CH-15,CW,15);
       ctx.fillStyle="rgba(34,211,238,0.7)"; ctx.font="5.8px monospace"; ctx.textAlign="left";
-      ctx.fillText(`YOLOv8n · ${persons.length} detections · ${(29.5+Math.sin(f*0.02)*0.5).toFixed(1)}fps`, 5, CH-5);
+      ctx.fillText(`YOLOv8n + LSTM · ${persons.length} detections · ${(29.5+Math.sin(f*0.02)*0.5).toFixed(1)}fps`, 5, CH-5);
 
       // LIVE
       const pulse = Math.sin(f*0.07)>0;
@@ -244,27 +244,29 @@ function GateView() {
 // ── View Config ─────────────────────────────────────────────────────────────
 
 const VIEW_BUTTONS: { id: View; icon: string; label: string }[] = [
-  { id: "stadium",     icon: "🏟️", label: "Stadium Map"  },
-  { id: "internal",    icon: "📷", label: "Internal"      },
-  { id: "passthrough", icon: "🚶", label: "Passthrough"   },
-  { id: "gates",       icon: "🚪", label: "Gates"         },
-  { id: "yolo",        icon: "🤖", label: "YOLO"          },
+  { id: "split",       icon: "⚡", label: "Stadium + YOLO/LSTM Split" },
+  { id: "stadium",     icon: "🏟️", label: "Stadium Map"               },
+  { id: "internal",    icon: "📷", label: "Internal"                   },
+  { id: "passthrough", icon: "🚶", label: "Passthrough"                },
+  { id: "gates",       icon: "🚪", label: "Gates"                      },
+  { id: "yolo",        icon: "🤖", label: "YOLO + LSTM Detection"      },
 ];
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
 export function LivePanel({ zones }: Props) {
-  const [view, setView] = useState<View>("stadium");
+  const [view, setView] = useState<View>("split");
 
   const headerLabel: Record<View, string> = {
+    split:       "Stadium Map + YOLO/LSTM Detection",
     stadium:     "Stadium Capacity Map",
     internal:    "Internal Stadium — Live Camera",
     passthrough: "Passthrough — Ticket Verification",
     gates:       "Gate Cameras — Entry Points",
-    yolo:        "YOLO Detection View",
+    yolo:        "YOLOv8 + LSTM Anomaly Detection",
   };
 
-  const isLive = view !== "stadium";
+  const isLive = view !== "stadium" && view !== "split";
 
   return (
     <div className="rounded-xl border border-gray-700 flex flex-col overflow-hidden" style={{ background: "#0d1420", height: "680px" }}>
@@ -295,6 +297,23 @@ export function LivePanel({ zones }: Props) {
 
       {/* Content */}
       <div className="flex-1 min-h-0 overflow-hidden">
+        {view === "split" && (
+          <div className="w-full h-full flex gap-0.5">
+            <div className="flex-1 flex flex-col p-1.5 min-w-0">
+              <p className="text-[9px] text-gray-500 uppercase tracking-wider px-1 mb-1 shrink-0">Capacity Heatmap</p>
+              <div className="flex-1 min-h-0">
+                <StadiumMap zones={zones} fillHeight />
+              </div>
+            </div>
+            <div className="w-px bg-gray-700/60 shrink-0" />
+            <div className="flex-1 flex flex-col min-w-0">
+              <p className="text-[9px] text-cyan-500 uppercase tracking-wider px-2 pt-1.5 mb-1 shrink-0">YOLOv8 + LSTM Detection</p>
+              <div className="flex-1 min-h-0 bg-black">
+                <YoloCanvas zones={zones} />
+              </div>
+            </div>
+          </div>
+        )}
         {view === "stadium" && (
           <div className="w-full h-full flex flex-col p-2">
             <StadiumMap zones={zones} fillHeight />
