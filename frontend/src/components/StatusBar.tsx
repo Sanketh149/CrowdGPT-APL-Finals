@@ -4,6 +4,7 @@
 
 import React from "react";
 import type { MatchPhase, ProtocolLevel, SystemStatus } from "../types";
+import { useAuth } from "../context/AuthContext";
 
 interface Props {
   status: SystemStatus | null;
@@ -66,6 +67,7 @@ export function StatusBar({ status, isConnected }: Props) {
   const protocol = (status?.active_protocol ?? "NORMAL") as ProtocolLevel;
   const cfg = PROTOCOL_CONFIG[protocol];
   const phase = (status?.phase ?? "pre_match") as MatchPhase;
+  const { user, logout } = useAuth();
 
   return (
     <header className="w-full bg-gray-900 border-b border-gray-700 px-4 py-2 flex items-center justify-between gap-4">
@@ -74,7 +76,7 @@ export function StatusBar({ status, isConnected }: Props) {
         <div className="flex items-center gap-2">
           <span className="text-2xl" aria-hidden="true">🏟️</span>
           <div>
-            <p className="text-white font-bold text-sm leading-tight">CrowdGuard Command</p>
+            <p className="text-white font-bold text-sm leading-tight">CrowdGPT</p>
             <p className="text-gray-500 text-[10px]">Narendra Modi Stadium · IPL 2026</p>
           </div>
         </div>
@@ -115,6 +117,28 @@ export function StatusBar({ status, isConnected }: Props) {
               : "--:--:--"}
           </p>
         </div>
+
+        {user && (
+          <div className="flex items-center gap-2 pl-3 border-l border-gray-700">
+            {user.picture && (
+              <img
+                src={user.picture}
+                alt={user.name}
+                className="w-6 h-6 rounded-full border border-gray-700"
+              />
+            )}
+            <span className="text-xs text-gray-400">{user.name}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900 text-blue-300 font-medium">
+              {user.role}
+            </span>
+            <button
+              onClick={logout}
+              className="text-xs text-gray-600 hover:text-gray-400 transition-colors ml-1"
+            >
+              Sign out
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

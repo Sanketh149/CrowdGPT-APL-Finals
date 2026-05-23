@@ -157,3 +157,20 @@ export interface GateOverrideRequest {
   gate_id: string;
   action: "open" | "close";
 }
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+export type AdminRole = "SUPER_ADMIN" | "OPERATOR";
+
+export interface User {
+  email: string;
+  name: string;
+  picture: string;
+  role: AdminRole;
+}
+
+export interface AuthState {
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+}

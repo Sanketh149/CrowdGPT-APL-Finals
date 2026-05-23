@@ -135,25 +135,28 @@ def acknowledge_alert_tool(alert_id: str, acknowledged_by: str = "operator") -> 
 
 
 def _attempt_real_dispatch(alert: Dict) -> str:
-    """
-    Try to deliver the alert via a configured webhook or Pub/Sub topic.
-    Returns 'delivered', 'queued', or 'simulated'.
-    """
-    # Try Google Cloud Pub/Sub
+    """Deliver alert via SendGrid email, Pub/Sub, webhook, or simulation."""
+
+    # 1. SendGrid email — primary for field_staff and public_pa
+    sendgrid_key = os.getenv("SENDGRID_API_KEY")
+    if sendgrid_key and alert["channel"] in ("field_staff", "public_pa", "all"):
+        status = _send_sendgrid_email(alert, sendgrid_key)
+        if status == "delivered_email":
+            return status
+
+    # 2. Pub/Sub fallback
     pubsub_topic = os.getenv("ALERT_PUBSUB_TOPIC")
     if pubsub_topic:
         try:
             from google.cloud import pubsub_v1  # type: ignore
-
             publisher = pubsub_v1.PublisherClient()
-            message_data = json.dumps(alert).encode("utf-8")
-            future = publisher.publish(pubsub_topic, data=message_data)
+            future = publisher.publish(pubsub_topic, data=json.dumps(alert).encode())
             future.result(timeout=5)
             return "delivered_pubsub"
         except Exception as e:
             logger.warning(f"Pub/Sub dispatch failed: {e}")
 
-    # Try webhook
+    # 3. Webhook fallback
     webhook_url = os.getenv("ALERT_WEBHOOK_URL")
     if webhook_url:
         try:
@@ -165,3 +168,77 @@ def _attempt_real_dispatch(alert: Dict) -> str:
             logger.warning(f"Webhook dispatch failed: {e}")
 
     return "simulated"
+
+
+def _send_sendgrid_email(alert: Dict, api_key: str) -> str:
+    """Send HTML-formatted alert email via SendGrid."""
+    try:
+        import sendgrid as sg_module
+        from sendgrid.helpers.mail import Mail
+
+        from_email = os.getenv("ALERT_EMAIL_FROM", "alerts@crowdguard.demo")
+        to_emails_raw = os.getenv("ALERT_EMAIL_TO", "")
+        to_emails = [e.strip() for e in to_emails_raw.split(",") if e.strip()]
+        if not to_emails:
+            logger.warning("ALERT_EMAIL_TO not configured — skipping email")
+            return "skipped_no_recipient"
+
+        severity_emoji = {"INFO": "ℹ️", "WARNING": "⚠️", "CRITICAL": "🚨"}.get(
+            alert["severity"], "📢"
+        )
+        channel_label = alert["channel"].replace("_", " ").title()
+        subject = f"{severity_emoji} CrowdGuard [{alert['severity']}] — {channel_label}"
+
+        actions_html = "".join(
+            f"<li>{a}</li>" for a in (alert.get("actions_required") or [])
+        )
+        zone_line = (
+            f"<p><strong>Zone:</strong> {alert['zone_id']}</p>"
+            if alert.get("zone_id")
+            else ""
+        )
+        accent = (
+            "#dc2626"
+            if alert["severity"] == "CRITICAL"
+            else "#f59e0b"
+            if alert["severity"] == "WARNING"
+            else "#3b82f6"
+        )
+
+        html_body = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;
+                    border:2px solid {accent};border-radius:8px;overflow:hidden">
+          <div style="background:{accent};color:white;padding:16px 20px">
+            <h2 style="margin:0">{severity_emoji} CrowdGuard Command Alert</h2>
+            <p style="margin:4px 0 0;opacity:0.9">{alert['severity']} — {channel_label}</p>
+          </div>
+          <div style="padding:20px;background:#fff">
+            <p style="font-size:16px;color:#111">{alert['message']}</p>
+            {zone_line}
+            <p><strong>Time:</strong> {alert['timestamp']}</p>
+            <p><strong>Alert ID:</strong> {alert['alert_id']}</p>
+            {'<p><strong>Required Actions:</strong></p><ul style="color:#dc2626">' + actions_html + '</ul>' if actions_html else ''}
+          </div>
+          <div style="background:#f3f4f6;padding:10px 20px;font-size:12px;color:#6b7280">
+            CrowdGuard Command · Narendra Modi Stadium · IPL 2026 Final
+          </div>
+        </div>
+        """
+
+        sg = sg_module.SendGridAPIClient(api_key=api_key)
+        message = Mail(
+            from_email=from_email,
+            to_emails=to_emails,
+            subject=subject,
+            html_content=html_body,
+        )
+        response = sg.send(message)
+        if response.status_code in (200, 202):
+            logger.info(f"SendGrid email delivered to {to_emails}: {alert['alert_id']}")
+            return "delivered_email"
+        else:
+            logger.warning(f"SendGrid returned {response.status_code}")
+            return "simulated"
+    except Exception as e:
+        logger.warning(f"SendGrid dispatch failed: {e}")
+        return "simulated"
