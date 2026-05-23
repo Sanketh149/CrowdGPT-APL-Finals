@@ -257,11 +257,11 @@ export function LivePanel({ zones }: Props) {
   const [view, setView] = useState<View>("stadium");
 
   const headerLabel: Record<View, string> = {
-    stadium:     "Stadium Map",
-    internal:    "Internal — Live",
-    passthrough: "Passthrough",
-    gates:       "Gate Cameras",
-    yolo:        "YOLO Detection",
+    stadium:     "Stadium Capacity Map",
+    internal:    "Internal Stadium — Live Camera",
+    passthrough: "Passthrough — Ticket Verification",
+    gates:       "Gate Cameras — Entry Points",
+    yolo:        "YOLO Detection View",
   };
 
   const isLive = view !== "stadium";
@@ -280,14 +280,14 @@ export function LivePanel({ zones }: Props) {
             <button
               key={btn.id}
               onClick={() => setView(btn.id)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all whitespace-nowrap shrink-0 ${
+              title={btn.label}
+              className={`flex items-center justify-center w-7 h-7 rounded-md text-base transition-all shrink-0 ${
                 view === btn.id
-                  ? "bg-blue-600 text-white shadow"
+                  ? "bg-blue-600 shadow"
                   : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
               }`}
             >
-              <span>{btn.icon}</span>
-              <span>{btn.label}</span>
+              {btn.icon}
             </button>
           ))}
         </div>
