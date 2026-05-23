@@ -45,6 +45,7 @@ success "Artifact Registry ready"
 info "Building frontend image (VITE_API_URL=$BACKEND_URL)..."
 FRONTEND_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/frontend:latest"
 docker build \
+  --platform linux/amd64 \
   --build-arg "VITE_API_URL=${BACKEND_URL}" \
   -t "$FRONTEND_IMAGE" \
   -f frontend/Dockerfile \

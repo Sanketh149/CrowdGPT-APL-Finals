@@ -30,7 +30,7 @@ success "Artifact Registry ready"
 
 info "Building backend image..."
 BACKEND_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/backend:latest"
-docker build -t "$BACKEND_IMAGE" -f backend/Dockerfile backend/
+docker build --platform linux/amd64 -t "$BACKEND_IMAGE" -f backend/Dockerfile backend/
 docker push "$BACKEND_IMAGE"
 success "Backend image pushed"
 
