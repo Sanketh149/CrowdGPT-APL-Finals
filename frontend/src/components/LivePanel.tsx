@@ -4,6 +4,7 @@ import { StadiumMap } from "./StadiumMap";
 
 interface Props {
   zones: Zone[];
+  onViewChange?: (view: View) => void;
 }
 
 type View = "split" | "stadium" | "internal" | "passthrough" | "gates" | "yolo";
@@ -254,8 +255,13 @@ const VIEW_BUTTONS: { id: View; icon: string; label: string }[] = [
 
 // ── Main Component ──────────────────────────────────────────────────────────
 
-export function LivePanel({ zones }: Props) {
+export function LivePanel({ zones, onViewChange }: Props) {
   const [view, setView] = useState<View>("split");
+
+  const handleViewChange = (v: View) => {
+    setView(v);
+    onViewChange?.(v);
+  };
 
   const headerLabel: Record<View, string> = {
     split:       "Stadium Map + YOLO/LSTM Detection",
@@ -281,7 +287,7 @@ export function LivePanel({ zones }: Props) {
           {VIEW_BUTTONS.map((btn) => (
             <button
               key={btn.id}
-              onClick={() => setView(btn.id)}
+              onClick={() => handleViewChange(btn.id)}
               title={btn.label}
               className={`flex items-center justify-center w-7 h-7 rounded-md text-base transition-all shrink-0 ${
                 view === btn.id

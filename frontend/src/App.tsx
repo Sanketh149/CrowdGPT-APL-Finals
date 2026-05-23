@@ -75,6 +75,7 @@ function Dashboard() {
   const [phase, setPhase] = useState<MatchPhase>("pre_match");
   const [isRunning, setIsRunning] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
+  const [liveView, setLiveView] = useState("split");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { decisions, isConnected, clearDecisions } = useAgentStream();
@@ -229,15 +230,14 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Main content grid */}
+      {/* Main content grid — LivePanel expands to 8 cols in split view */}
       <main className="grid grid-cols-12 gap-2.5 p-2.5">
-        {/* Left column: Live Panel (Live Feed / Stadium Map / YOLO toggle) */}
-        <section className="col-span-12 lg:col-span-5 xl:col-span-5">
-          <LivePanel zones={zones} />
+        <section className={`col-span-12 ${liveView === "split" ? "lg:col-span-8" : "lg:col-span-5"} transition-all`}>
+          <LivePanel zones={zones} onViewChange={setLiveView} />
         </section>
 
         {/* Middle column: Agent Feed */}
-        <section className="col-span-12 lg:col-span-4 xl:col-span-4" style={{ height: "680px" }}>
+        <section className={`col-span-12 ${liveView === "split" ? "lg:col-span-2" : "lg:col-span-4"} transition-all`} style={{ height: "680px" }}>
           <AgentFeed
             decisions={decisions}
             isConnected={isConnected}
@@ -246,7 +246,7 @@ function Dashboard() {
         </section>
 
         {/* Right column: Gate Controls + Alerts */}
-        <section className="col-span-12 lg:col-span-3 xl:col-span-3 flex flex-col gap-2.5" style={{ height: "680px" }}>
+        <section className={`col-span-12 ${liveView === "split" ? "lg:col-span-2" : "lg:col-span-3"} flex flex-col gap-2.5 transition-all`} style={{ height: "680px" }}>
           <div className="flex-1 min-h-0">
             <GateControls gates={gates} onGateChange={handleGateChange} />
           </div>
