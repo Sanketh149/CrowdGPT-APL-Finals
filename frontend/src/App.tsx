@@ -4,9 +4,6 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import LoginPage from "./pages/LoginPage";
 import BroadcastScreen from "./pages/BroadcastScreen";
 import { StatusBar } from "./components/StatusBar";
 import { AgentFeed } from "./components/AgentFeed";
@@ -281,21 +278,11 @@ function Dashboard() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/screen" element={<BroadcastScreen />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </AuthProvider>
+      <Routes>
+        <Route path="/screen" element={<BroadcastScreen />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }

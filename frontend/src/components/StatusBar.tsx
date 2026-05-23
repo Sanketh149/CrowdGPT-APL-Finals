@@ -1,6 +1,5 @@
 import React from "react";
 import type { MatchPhase, ProtocolLevel, SystemStatus } from "../types";
-import { useAuth } from "../context/AuthContext";
 
 interface Props {
   status: SystemStatus | null;
@@ -49,7 +48,6 @@ export function StatusBar({ status, isConnected }: Props) {
   const protocol = (status?.active_protocol ?? "NORMAL") as ProtocolLevel;
   const cfg = PROTOCOL_CONFIG[protocol];
   const phase = (status?.phase ?? "pre_match") as MatchPhase;
-  const { user, logout } = useAuth();
 
   return (
     <header
@@ -119,24 +117,11 @@ export function StatusBar({ status, isConnected }: Props) {
           </span>
         </div>
 
-        {/* User */}
-        {user && (
-          <div className="flex items-center gap-2 pl-3 border-l border-gray-800">
-            {user.picture && (
-              <img src={user.picture} alt={user.name} className="w-6 h-6 rounded-full ring-1 ring-gray-700" />
-            )}
-            <span className="text-[11px] text-gray-300 font-medium max-w-[100px] truncate">{user.name}</span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800 font-bold tracking-wide">
-              {user.role}
-            </span>
-            <button
-              onClick={logout}
-              className="text-[10px] text-gray-600 hover:text-gray-300 transition-colors"
-            >
-              Sign out
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2 pl-3 border-l border-gray-800">
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800 font-bold tracking-wide">
+            OPERATOR
+          </span>
+        </div>
       </div>
     </header>
   );
