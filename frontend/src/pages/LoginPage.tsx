@@ -4,7 +4,7 @@ import { useSearchParams } from "react-router-dom";
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  unauthorized: "Your Google account is not authorised to access CrowdGPT. Contact your system administrator.",
+  unauthorized: "Your Google account is not on the access list. Please use your official Google account.",
   auth_failed: "Authentication failed. Please try again.",
   oauth_denied: "Sign-in was cancelled. Please try again.",
 };
@@ -302,7 +302,7 @@ export default function LoginPage() {
             </button>
 
             <p className="text-center text-[10px]" style={{ color: "#1e293b" }}>
-              Only pre-approved admin emails can access this system.
+              Sign in with any Google account to access the demo.
             </p>
           </div>
 

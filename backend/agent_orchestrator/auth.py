@@ -26,10 +26,16 @@ JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 8
 
+_raw_admins = os.getenv("ALLOWED_ADMINS", "")
+# OPEN_ACCESS=true OR ALLOWED_ADMINS=* → any Google account can log in (jury/demo mode)
+OPEN_ACCESS: bool = (
+    os.getenv("OPEN_ACCESS", "false").lower() == "true"
+    or _raw_admins.strip() in ("", "*")
+)
 ALLOWED_ADMINS: set[str] = set(
     e.strip().lower()
-    for e in os.getenv("ALLOWED_ADMINS", "").split(",")
-    if e.strip()
+    for e in _raw_admins.split(",")
+    if e.strip() and e.strip() != "*"
 )
 
 ROLE_MAP: dict[str, str] = {
@@ -78,7 +84,7 @@ async def exchange_code_for_user(code: str) -> dict:
 
     email = user.get("email", "").lower()
 
-    if ALLOWED_ADMINS and email not in ALLOWED_ADMINS:
+    if not OPEN_ACCESS and ALLOWED_ADMINS and email not in ALLOWED_ADMINS:
         logger.warning(f"Unauthorized login attempt: {email}")
         raise HTTPException(
             status_code=403,
