@@ -1,0 +1,183 @@
+# CrowdGuard Command — Google Cloud Build CI/CD Pipeline
+# Builds and deploys all 3 Cloud Run services.
+#
+# Usage:
+#   gcloud builds submit --config infra/cloudbuild.yaml \
+#     --substitutions _GCP_PROJECT_ID=your-project,_GCP_REGION=us-central1
+
+substitutions:
+  _GCP_PROJECT_ID: "crowdguard-project"
+  _GCP_REGION: "us-central1"
+  _REPO: "crowdguard"
+  _IMAGE_TAG: "$SHORT_SHA"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+steps:
+
+  # ── 1. Build Orchestrator image ────────────────────────────────────────────
+  - id: "build-orchestrator"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - build
+      - -t
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/orchestrator:${_IMAGE_TAG}"
+      - -t
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/orchestrator:latest"
+      - -f
+      - "backend/Dockerfile"
+      - backend/
+    waitFor: ["-"]
+
+  # ── 2. Build Video Processor image ────────────────────────────────────────
+  - id: "build-video-processor"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - build
+      - -t
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/video-processor:${_IMAGE_TAG}"
+      - -t
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/video-processor:latest"
+      - -f
+      - "backend/Dockerfile"
+      - --build-arg
+      - "SERVICE=video_processor"
+      - backend/
+    waitFor: ["-"]
+
+  # ── 3. Build Frontend image ────────────────────────────────────────────────
+  - id: "build-frontend"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - build
+      - -t
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/frontend:${_IMAGE_TAG}"
+      - -t
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/frontend:latest"
+      - --build-arg
+      - "VITE_API_URL=https://crowdguard-orchestrator-${_GCP_PROJECT_ID}.${_GCP_REGION}.run.app"
+      - -f
+      - "frontend/Dockerfile"
+      - frontend/
+    waitFor: ["-"]
+
+  # ── 4. Push all images ─────────────────────────────────────────────────────
+  - id: "push-orchestrator"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - push
+      - "--all-tags"
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/orchestrator"
+    waitFor: ["build-orchestrator"]
+
+  - id: "push-video-processor"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - push
+      - "--all-tags"
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/video-processor"
+    waitFor: ["build-video-processor"]
+
+  - id: "push-frontend"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      - push
+      - "--all-tags"
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/frontend"
+    waitFor: ["build-frontend"]
+
+  # ── 5. Deploy Orchestrator to Cloud Run ───────────────────────────────────
+  - id: "deploy-orchestrator"
+    name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - crowdguard-orchestrator
+      - --image
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/orchestrator:${_IMAGE_TAG}"
+      - --region
+      - "${_GCP_REGION}"
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --min-instances
+      - "1"
+      - --max-instances
+      - "10"
+      - --memory
+      - "2Gi"
+      - --cpu
+      - "2"
+      - --port
+      - "8000"
+      - --set-secrets
+      - "GOOGLE_API_KEY=crowdguard-google-api-key:latest"
+      - --set-env-vars
+      - "GCP_PROJECT_ID=${_GCP_PROJECT_ID},GCP_REGION=${_GCP_REGION},GCS_BUCKET_NAME=crowdguard-sensor-data"
+    waitFor: ["push-orchestrator"]
+
+  # ── 6. Deploy Video Processor to Cloud Run ────────────────────────────────
+  - id: "deploy-video-processor"
+    name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - crowdguard-video-processor
+      - --image
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/video-processor:${_IMAGE_TAG}"
+      - --region
+      - "${_GCP_REGION}"
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --min-instances
+      - "0"
+      - --max-instances
+      - "5"
+      - --memory
+      - "4Gi"
+      - --cpu
+      - "4"
+      - --port
+      - "8001"
+      - --set-env-vars
+      - "GCP_PROJECT_ID=${_GCP_PROJECT_ID},GCS_BUCKET_NAME=crowdguard-sensor-data,YOLO_MODEL_SIZE=yolov8n"
+    waitFor: ["push-video-processor"]
+
+  # ── 7. Deploy Frontend to Cloud Run ───────────────────────────────────────
+  - id: "deploy-frontend"
+    name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - crowdguard-frontend
+      - --image
+      - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/frontend:${_IMAGE_TAG}"
+      - --region
+      - "${_GCP_REGION}"
+      - --platform
+      - managed
+      - --allow-unauthenticated
+      - --min-instances
+      - "1"
+      - --max-instances
+      - "5"
+      - --memory
+      - "512Mi"
+      - --cpu
+      - "1"
+      - --port
+      - "80"
+    waitFor: ["push-frontend"]
+
+images:
+  - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/orchestrator:${_IMAGE_TAG}"
+  - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/video-processor:${_IMAGE_TAG}"
+  - "${_GCP_REGION}-docker.pkg.dev/${_GCP_PROJECT_ID}/${_REPO}/frontend:${_IMAGE_TAG}"
+
+timeout: "1800s"

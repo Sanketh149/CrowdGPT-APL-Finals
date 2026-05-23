@@ -1,0 +1,80 @@
+<h2>CrowdGuard Command — Agent Architecture</h2>
+<p class="subtitle">Which orchestration approach fits best for the finale? Pick the one you want to build.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Hierarchical Orchestrator + Specialists</h3>
+      <p><strong>One master Orchestrator Agent</strong> receives all events and delegates to specialist agents. Each specialist acts independently and reports back.</p>
+      <br/>
+      <div style="font-family:monospace;font-size:12px;background:#1a1a2e;color:#e0e0e0;padding:12px;border-radius:6px;line-height:1.8">
+        Sensor Data / Operator Input<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+        <span style="color:#4fc3f7">[ Orchestrator Agent ]</span><br/>
+        &nbsp;&nbsp;↙&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↘<br/>
+        <span style="color:#a5d6a7">[Crowd]</span> <span style="color:#ffb74d">[Route]</span> <span style="color:#ef9a9a">[Threat]</span> <span style="color:#ce93d8">[Emergency]</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+        <span style="color:#4fc3f7">[ Unified Dashboard + Action Log ]</span>
+      </div>
+      <br/>
+      <ul style="font-size:13px;color:#aaa">
+        <li>Clean separation of concerns</li>
+        <li>Easy to demo each agent independently</li>
+        <li>Orchestrator can run parallel sub-agents (ADK ParallelAgent)</li>
+        <li><strong>Best for Phase 2 Q&A defense</strong></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Event-Driven Pipeline (Sequential)</h3>
+      <p>Data flows through a fixed pipeline: Ingest → Analyze → Decide → Act. Each stage enriches the data and passes it forward.</p>
+      <br/>
+      <div style="font-family:monospace;font-size:12px;background:#1a1a2e;color:#e0e0e0;padding:12px;border-radius:6px;line-height:1.8">
+        Sensor Feed<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+        <span style="color:#a5d6a7">[ Crowd Density Agent ]</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;↓ (density + flow vectors)<br/>
+        <span style="color:#ffb74d">[ Routing Decision Agent ]</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;↓ (gate commands)<br/>
+        <span style="color:#ef9a9a">[ Threat Evaluator Agent ]</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;↓ (risk score)<br/>
+        <span style="color:#ce93d8">[ Emergency Protocol Agent ]</span>
+      </div>
+      <br/>
+      <ul style="font-size:13px;color:#aaa">
+        <li>Simple to reason about data flow</li>
+        <li>Bottleneck if one agent is slow</li>
+        <li>Less "agentic" — more like a pipeline</li>
+        <li>Lower score on "Agentic Depth"</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid: Parallel Monitoring + Sequential Response</h3>
+      <p><strong>Monitoring agents run in parallel</strong> continuously. When a threshold is crossed, a <strong>sequential response chain</strong> activates.</p>
+      <br/>
+      <div style="font-family:monospace;font-size:12px;background:#1a1a2e;color:#e0e0e0;padding:12px;border-radius:6px;line-height:1.8">
+        <span style="color:#4fc3f7">[ Always-On Parallel Monitor ]</span><br/>
+        <span style="color:#a5d6a7">[Crowd]</span> + <span style="color:#ffb74d">[Gate]</span> + <span style="color:#ef9a9a">[Weather]</span> (concurrent)<br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;↓ threshold breach<br/>
+        <span style="color:#4fc3f7">[ Orchestrator triggers Response Chain ]</span><br/>
+        &nbsp;&nbsp;&nbsp;&nbsp;↓<br/>
+        <span style="color:#ce93d8">Route → Escalate → Notify → Log</span>
+      </div>
+      <br/>
+      <ul style="font-size:13px;color:#aaa">
+        <li>Most realistic to real stadium ops</li>
+        <li>Shows ADK ParallelAgent + SequentialAgent</li>
+        <li>Highest "Agentic Depth" score potential</li>
+        <li><strong>Recommended — mirrors your existing CrowdGuard pattern</strong></li>
+      </ul>
+    </div>
+  </div>
+</div>

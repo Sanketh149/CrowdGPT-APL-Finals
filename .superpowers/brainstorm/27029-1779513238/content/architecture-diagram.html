@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>CrowdGuard Command — Architecture</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; padding: 24px; }
+  h1 { text-align: center; font-size: 18px; color: #1a1a2e; margin-bottom: 6px; }
+  .subtitle { text-align: center; font-size: 12px; color: #666; margin-bottom: 20px; }
+
+  .canvas {
+    background: #e8edf2;
+    border: 2px solid #b0bec5;
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    min-height: 520px;
+  }
+  .gcp-label {
+    font-size: 11px; color: #555; font-weight: 600;
+    margin-bottom: 14px;
+  }
+
+  .zones {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .zone {
+    border: 1.5px dashed;
+    border-radius: 10px;
+    padding: 10px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .zone-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  .zone-cicd   { background: #fffde7; border-color: #f9a825; width: 140px; }
+  .zone-frontend { background: #e3f2fd; border-color: #1565c0; width: 150px; }
+  .zone-sensor { background: #fff3e0; border-color: #e65100; width: 150px; }
+  .zone-agents { background: #fce4ec; border-color: #c62828; width: 220px; }
+  .zone-ai     { background: #e8f5e9; border-color: #2e7d32; width: 145px; }
+  .zone-external { background: #f3e5f5; border-color: #6a1b9a; width: 145px; }
+  .zone-storage { background: #e8f5e9; border-color: #388e3c; width: 140px; position: absolute; bottom: 20px; left: 174px; }
+
+  .node {
+    background: white;
+    border: 1.5px solid #90a4ae;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    font-size: 11px;
+    position: relative;
+  }
+  .node-title { font-weight: 700; color: #1a237e; font-size: 11px; }
+  .node-sub   { font-size: 9px; color: #888; margin-top: 1px; }
+  .node-blue  { border-color: #1565c0; }
+  .node-orange{ border-color: #e65100; }
+  .node-red   { border-color: #c62828; background: #fff8f8; }
+  .node-green { border-color: #2e7d32; }
+  .node-purple{ border-color: #6a1b9a; }
+  .node-orch  { border-color: #1565c0; background: #e3f2fd; }
+
+  .parallel-box {
+    border: 1.5px dashed #1565c0;
+    border-radius: 6px;
+    padding: 6px;
+    margin-bottom: 8px;
+    background: #f0f7ff;
+  }
+  .parallel-label { font-size: 9px; color: #1565c0; font-weight: 700; margin-bottom: 4px; }
+  .seq-box {
+    border: 1.5px dashed #c62828;
+    border-radius: 6px;
+    padding: 6px;
+    background: #fff5f5;
+  }
+  .seq-label { font-size: 9px; color: #c62828; font-weight: 700; margin-bottom: 4px; }
+
+  .actor {
+    background: white;
+    border: 2px solid #37474f;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    width: 70px;
+    margin-right: 14px;
+    margin-top: 40px;
+    flex-shrink: 0;
+  }
+
+  /* Arrow lines via SVG overlay */
+  .arrows-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  .arrow-label {
+    font-size: 9px;
+    fill: #555;
+  }
+
+  .badge {
+    display: inline-block;
+    background: #e3f2fd;
+    border: 1px solid #1565c0;
+    color: #1565c0;
+    font-size: 8px;
+    padding: 1px 5px;
+    border-radius: 10px;
+    margin-top: 3px;
+  }
+
+  .step-num {
+    display: inline-block;
+    background: #c62828;
+    color: white;
+    font-size: 8px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 14px;
+    margin-right: 4px;
+  }
+</style>
+</head>
+<body>
+<h1>CrowdGuard Command — System Architecture</h1>
+<p class="subtitle">Multi-Agent Crowd Safety Platform · Google Cloud Platform · Gemini + ADK</p>
+
+<div class="canvas">
+  <div class="gcp-label">Google Cloud Platform</div>
+
+  <div style="display:flex; gap:14px; align-items:flex-start; flex-wrap:nowrap;">
+
+    <!-- Actor -->
+    <div class="actor">User<br/>Operator</div>
+
+    <!-- CI/CD -->
+    <div class="zone zone-cicd">
+      <div class="zone-label">CI/CD Pipeline</div>
+      <div class="node">
+        <div class="node-title">☁ Cloud Build</div>
+        <div class="node-sub">CI/CD</div>
+      </div>
+      <div style="text-align:center;font-size:9px;color:#888;margin:3px 0">▼ Store</div>
+      <div class="node">
+        <div class="node-title">📦 Artifact Registry</div>
+        <div class="node-sub">Container Registry</div>
+      </div>
+    </div>
+
+    <!-- Frontend -->
+    <div class="zone zone-frontend">
+      <div class="zone-label">Operator Dashboard</div>
+      <div class="node node-blue">
+        <div class="node-title">⚡ Frontend (React)</div>
+        <div class="node-sub">Serverless Web App</div>
+        <div class="badge">Cloud Run</div>
+      </div>
+      <div style="font-size:9px;color:#555;margin:4px 2px">Live map · Gate controls<br/>Agent decision feed · Alerts</div>
+    </div>
+
+    <!-- Sensor/Video -->
+    <div class="zone zone-sensor">
+      <div class="zone-label">Sensor & Video Processing</div>
+      <div class="node node-orange">
+        <div class="node-title">📹 Video Processor</div>
+        <div class="node-sub">FastAPI + YOLOv8</div>
+        <div class="badge">Cloud Run</div>
+      </div>
+      <div style="font-size:9px;color:#555;margin:4px 2px">Crowd density<br/>Flow vectors<br/>Anomaly detection</div>
+    </div>
+
+    <!-- Multi-Agent Orchestration -->
+    <div class="zone zone-agents">
+      <div class="zone-label">Multi-Agent Orchestration</div>
+
+      <div class="node node-orch" style="margin-bottom:10px">
+        <div class="node-title">🎯 Orchestrator Agent</div>
+        <div class="node-sub">Google ADK · Gemini 1.5 Pro</div>
+        <div class="badge">Cloud Run</div>
+      </div>
+
+      <div class="parallel-box">
+        <div class="parallel-label">⟳ ParallelAgent — Monitoring</div>
+        <div class="node" style="margin-bottom:4px;padding:5px 8px">
+          <div class="node-title">👥 Crowd Density Agent</div>
+          <div class="node-sub">Zone density + flow vectors</div>
+        </div>
+        <div class="node" style="margin-bottom:4px;padding:5px 8px">
+          <div class="node-title">🚪 Gate Sensor Agent</div>
+          <div class="node-sub">Throughput + bottleneck detection</div>
+        </div>
+        <div class="node" style="padding:5px 8px">
+          <div class="node-title">🌤 Weather Context Agent</div>
+          <div class="node-sub">Live weather → routing impact</div>
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:9px;color:#c62828;margin:4px 0">▼ threshold breach</div>
+
+      <div class="seq-box">
+        <div class="seq-label">→ SequentialAgent — Response</div>
+        <div class="node" style="margin-bottom:4px;padding:5px 8px">
+          <div class="node-title"><span class="step-num">1</span>Routing Agent</div>
+          <div class="node-sub">Gate open/close commands</div>
+        </div>
+        <div class="node" style="margin-bottom:4px;padding:5px 8px">
+          <div class="node-title"><span class="step-num">2</span>Threat Detection Agent</div>
+          <div class="node-sub">Risk score · anomaly flag</div>
+        </div>
+        <div class="node" style="margin-bottom:4px;padding:5px 8px">
+          <div class="node-title"><span class="step-num">3</span>Emergency Protocol Agent</div>
+          <div class="node-sub">Evacuation · Medical · Lockdown</div>
+        </div>
+        <div class="node" style="padding:5px 8px">
+          <div class="node-title"><span class="step-num">4</span>Notifier Agent</div>
+          <div class="node-sub">Operator + staff alerts via Gemini</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Services -->
+    <div class="zone zone-ai">
+      <div class="zone-label">AI Services</div>
+      <div class="node node-green">
+        <div class="node-title">✨ Gemini 1.5 Pro</div>
+        <div class="node-sub">Large Language Model</div>
+        <div class="badge">Vertex AI</div>
+      </div>
+    </div>
+
+    <!-- External Systems -->
+    <div class="zone zone-external" style="margin-left:0">
+      <div class="zone-label">External Systems</div>
+      <div class="node node-purple">
+        <div class="node-title">🌦 Weather API</div>
+        <div class="node-sub">Real-time weather data</div>
+      </div>
+      <div class="node node-purple" style="margin-top:4px">
+        <div class="node-title">📲 Field Staff Alerts</div>
+        <div class="node-sub">SMS / Push notifications</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Storage zone below -->
+  <div style="display:flex; margin-top:14px; padding-left:84px; gap:14px;">
+    <div class="zone zone-storage" style="position:relative;bottom:auto;left:auto;width:200px">
+      <div class="zone-label">Data & Storage Layer</div>
+      <div class="node node-green">
+        <div class="node-title">🗄 Cloud Storage (GCS)</div>
+        <div class="node-sub">Sensor data bus · Events</div>
+      </div>
+      <div class="node node-green" style="margin-top:4px">
+        <div class="node-title">⚡ Eventarc</div>
+        <div class="node-sub">Event-driven triggers</div>
+      </div>
+      <div class="node node-green" style="margin-top:4px">
+        <div class="node-title">🔑 Secret Manager</div>
+        <div class="node-sub">API keys · Credentials</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div style="margin-top:16px;font-size:11px;color:#666;text-align:center">
+  <strong>CrowdGuard Command</strong> · Google Cloud Agentic Premier League Finale 2026 · Built with ADK + Gemini + Cloud Run
+</div>
+
+</body>
+</html>
