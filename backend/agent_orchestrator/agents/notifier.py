@@ -212,6 +212,8 @@ class NotifierAgent:
                 result = await call_gemini(prompt, model=self.model)
                 if result:
                     return result
+            except Exception as e:
+                logger.warning(f"Gemini message generation failed: {e}")
 
         # Fallback template
         return (
