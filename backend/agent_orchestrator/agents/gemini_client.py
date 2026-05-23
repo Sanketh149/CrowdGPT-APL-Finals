@@ -22,10 +22,11 @@ def get_gemini_model(model: str):
     return _model_cache[model]
 
 
-async def call_gemini(prompt: str, model: str = None, max_retries: int = 3) -> str | None:
+async def call_gemini(prompt: str, model: str = None, max_retries: int = 2) -> str | None:
     """
-    Call Gemini with exponential backoff on quota/rate-limit errors.
-    Returns response text or None if all retries fail.
+    Call Gemini with retry on per-minute quota errors.
+    Skips retry on daily/project quota exhaustion (no point waiting).
+    Returns response text or None if unavailable.
     """
     if model is None:
         model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
@@ -38,10 +39,16 @@ async def call_gemini(prompt: str, model: str = None, max_retries: int = 3) -> s
             return response.text.strip()
         except Exception as e:
             err = str(e)
-            is_quota = "quota" in err.lower() or "429" in err or "rate" in err.lower()
-            if is_quota and attempt < max_retries - 1:
-                wait = 15 * (attempt + 1)  # 15s, 30s, 45s
-                logger.warning(f"Gemini quota hit (attempt {attempt+1}), retrying in {wait}s...")
+            is_rate_limit = "429" in err or "rate" in err.lower()
+            is_daily_quota = "per_day" in err.lower() or "PerDay" in err or "free_tier_input_token" in err.lower()
+
+            if is_daily_quota:
+                # Daily quota exhausted — no point retrying, fall back immediately
+                logger.warning("Gemini daily quota exhausted — using fallback decision")
+                return None
+            elif is_rate_limit and attempt < max_retries - 1:
+                wait = 30  # wait 30s on per-minute rate limit
+                logger.warning(f"Gemini rate limit (attempt {attempt+1}), retrying in {wait}s...")
                 await asyncio.sleep(wait)
             else:
                 logger.warning(f"Gemini call failed: {e}")

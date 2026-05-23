@@ -249,6 +249,26 @@ async def get_gates(gate_id: str = "ALL"):
     return {"gates": enriched, "total": len(enriched)}
 
 
+@app.get("/alerts")
+async def get_alerts(severity: str = "", channel: str = ""):
+    """Return active (unacknowledged) alerts."""
+    from tools.alert_tools import get_active_alerts_tool
+    return get_active_alerts_tool(
+        severity_filter=severity or None,
+        channel_filter=channel or None,
+    )
+
+
+@app.post("/alerts/{alert_id}/acknowledge")
+async def acknowledge_alert(alert_id: str, acknowledged_by: str = "operator"):
+    """Acknowledge an alert — removes it from the active queue."""
+    from tools.alert_tools import acknowledge_alert_tool
+    result = acknowledge_alert_tool(alert_id=alert_id, acknowledged_by=acknowledged_by)
+    if not result.get("success"):
+        raise HTTPException(status_code=404, detail=f"Alert {alert_id} not found")
+    return result
+
+
 @app.post("/gate/{gate_id}/override")
 async def override_gate(gate_id: str, action: str, request: Request):
     """Manual gate override — SUPER_ADMIN only."""
