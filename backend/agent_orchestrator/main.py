@@ -27,7 +27,7 @@ from auth import (
 from broadcast import broadcast_manager
 from orchestrator import CrowdGuardOrchestrator
 
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -79,9 +79,17 @@ async def auth_login():
 
 
 @app.get("/auth/callback")
-async def auth_callback(code: str, state: str = ""):
+async def auth_callback(code: str = "", error: str = "", state: str = ""):
     """Handle Google OAuth callback — issue JWT cookie and redirect to dashboard."""
-    user = await exchange_code_for_user(code)
+    if error:
+        return RedirectResponse(url=f"{FRONTEND_URL}/login?error=oauth_denied")
+    try:
+        user = await exchange_code_for_user(code)
+    except Exception as e:
+        detail = str(e)
+        if "not an authorized admin" in detail:
+            return RedirectResponse(url=f"{FRONTEND_URL}/login?error=unauthorized")
+        return RedirectResponse(url=f"{FRONTEND_URL}/login?error=auth_failed")
     token = create_jwt(user)
     response = RedirectResponse(url=f"{FRONTEND_URL}/dashboard")
     response.set_cookie(
@@ -212,6 +220,33 @@ async def stream_agent_decisions():
 async def get_system_status():
     """Return current system-wide status summary."""
     return await orchestrator.get_status()
+
+
+@app.get("/gates")
+async def get_gates(gate_id: str = "ALL"):
+    """Return status for all gates or a specific gate."""
+    from tools.gate_control import get_gate_status_tool, DEFAULT_GATE_CONFIG
+    import random
+    data = get_gate_status_tool(gate_id)
+    # Enrich with frontend-expected fields
+    gates = data.get("gates", [data]) if gate_id == "ALL" else [data]
+    enriched = []
+    for g in gates:
+        gid = g["gate_id"]
+        state = g["status"]
+        is_emergency = g.get("is_emergency", gid.startswith("E"))
+        util = round(random.uniform(0.2, 0.85), 2)
+        enriched.append({
+            "gate_id": gid,
+            "status": state,
+            "is_emergency_gate": is_emergency,
+            "flow_rate_ppm": random.randint(20, 120),
+            "utilisation_pct": util,
+            "queue_length": random.randint(0, 40) if util > 0.6 else 0,
+            "bottleneck": util > 0.75,
+            "timestamp": g.get("timestamp", datetime.utcnow().isoformat()),
+        })
+    return {"gates": enriched, "total": len(enriched)}
 
 
 @app.post("/gate/{gate_id}/override")
