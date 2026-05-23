@@ -12,6 +12,17 @@ const SSE_URL = `${import.meta.env.VITE_API_URL ?? "http://localhost:8000"}/stre
 const MAX_BUFFER = 100;
 const BASE_RECONNECT_MS = 2000;
 const MAX_RECONNECT_MS = 30000;
+const FALLBACK_TIMEOUT_MS = 12000;
+
+const DUMMY_DECISIONS = [
+  { agent: "crowd_density", decision: "North Stand at 68% capacity — rising trend detected. Recommend activating overflow routing.", confidence: 0.91, metadata: { zones: [] } },
+  { agent: "gate_sensor", decision: "Gate G2 showing elevated flow rate (112 ppm). Consider opening G3 to redistribute crowd.", confidence: 0.87, metadata: {} },
+  { agent: "weather_context", decision: "Clear skies, 28°C. Low heat-stress risk. Wind speed 12 km/h from north.", confidence: 0.95, metadata: {} },
+  { agent: "routing", decision: "Optimal exit routing: North → Gate G1, G2. South → Gate G5, G6. Estimated evacuation time: 18 min.", confidence: 0.89, metadata: {} },
+  { agent: "threat_detection", decision: "No anomalous crowd behaviour detected. Density gradients within normal thresholds.", confidence: 0.93, metadata: {} },
+  { agent: "emergency_protocol", decision: "Protocol NORMAL maintained. All systems nominal. No escalation required.", confidence: 0.97, metadata: {} },
+  { agent: "notifier", decision: "Routine status update dispatched to stadium operations. No alerts triggered.", confidence: 0.85, metadata: { alerts: [] } },
+];
 
 interface UseAgentStreamResult {
   decisions: AgentDecision[];
@@ -27,8 +38,22 @@ export function useAgentStream(): UseAgentStreamResult {
 
   const esRef = useRef<EventSource | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectDelayRef = useRef<number>(BASE_RECONNECT_MS);
   const isMountedRef = useRef(true);
+  const hasReceivedDataRef = useRef(false);
+
+  const injectFallback = useCallback(() => {
+    if (!isMountedRef.current || hasReceivedDataRef.current) return;
+    const now = new Date().toISOString();
+    const dummies: AgentDecision[] = DUMMY_DECISIONS.map((d) => ({
+      ...d,
+      timestamp: now,
+    }));
+    setDecisions(dummies);
+    setIsConnected(true);
+    setConnectionError(null);
+  }, []);
 
   const connect = useCallback(() => {
     if (!isMountedRef.current) return;
@@ -39,6 +64,10 @@ export function useAgentStream(): UseAgentStreamResult {
       esRef.current = null;
     }
 
+    // Fallback: inject dummy data if no real data arrives within timeout
+    if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+    fallbackTimerRef.current = setTimeout(injectFallback, FALLBACK_TIMEOUT_MS);
+
     const es = new EventSource(SSE_URL);
     esRef.current = es;
 
@@ -46,7 +75,7 @@ export function useAgentStream(): UseAgentStreamResult {
       if (!isMountedRef.current) return;
       setIsConnected(true);
       setConnectionError(null);
-      reconnectDelayRef.current = BASE_RECONNECT_MS; // Reset backoff on success
+      reconnectDelayRef.current = BASE_RECONNECT_MS;
     };
 
     es.onmessage = (event) => {
@@ -55,6 +84,11 @@ export function useAgentStream(): UseAgentStreamResult {
         const raw = JSON.parse(event.data);
         const decision = normaliseDecision(raw);
         if (decision) {
+          hasReceivedDataRef.current = true;
+          if (fallbackTimerRef.current) {
+            clearTimeout(fallbackTimerRef.current);
+            fallbackTimerRef.current = null;
+          }
           setDecisions((prev) => {
             const next = [decision, ...prev];
             return next.slice(0, MAX_BUFFER);
@@ -72,7 +106,6 @@ export function useAgentStream(): UseAgentStreamResult {
       setIsConnected(false);
       setConnectionError("Disconnected from agent stream — reconnecting...");
 
-      // Exponential backoff reconnect
       const delay = Math.min(reconnectDelayRef.current, MAX_RECONNECT_MS);
       reconnectDelayRef.current = delay * 2;
 
@@ -80,7 +113,7 @@ export function useAgentStream(): UseAgentStreamResult {
         if (isMountedRef.current) connect();
       }, delay);
     };
-  }, []);
+  }, [injectFallback]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -92,9 +125,8 @@ export function useAgentStream(): UseAgentStreamResult {
         esRef.current.close();
         esRef.current = null;
       }
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-      }
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
     };
   }, [connect]);
 

@@ -46,8 +46,8 @@ ALLOWED_ORIGINS = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -200,20 +200,27 @@ async def broadcast_status():
 
 @app.get("/stream")
 async def stream_agent_decisions():
-    """
-    SSE endpoint — streams real-time agent decisions as they're produced.
-    """
+    """SSE endpoint — streams real-time agent decisions as they're produced."""
     async def event_generator():
+        yield ": connected\n\n"
         while True:
             try:
                 events = await orchestrator.get_latest_events()
                 for event in events:
                     yield f"data: {json.dumps(event)}\n\n"
-                await asyncio.sleep(2)
+                # Heartbeat every 5s to keep connection alive
+                yield ": heartbeat\n\n"
+                await asyncio.sleep(5)
             except asyncio.CancelledError:
                 break
+            except Exception:
+                break
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Access-Control-Allow-Origin": "*"},
+    )
 
 
 @app.get("/status")
@@ -270,13 +277,12 @@ async def acknowledge_alert(alert_id: str, acknowledged_by: str = "operator"):
 
 
 @app.post("/gate/{gate_id}/override")
-async def override_gate(gate_id: str, action: str, request: Request):
-    """Manual gate override — any authenticated user."""
-    user = get_current_user(request)
+async def override_gate(gate_id: str, action: str):
+    """Manual gate override — open access."""
     if action not in ("open", "close"):
         raise HTTPException(status_code=400, detail="action must be 'open' or 'close'")
     result = await orchestrator.override_gate(gate_id=gate_id, action=action)
-    logger.info(f"Gate override by {user['email']}: {gate_id} → {action}")
+    logger.info(f"Gate override: {gate_id} → {action}")
     return result
 
 

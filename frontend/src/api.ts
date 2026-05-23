@@ -23,7 +23,6 @@ async function apiFetch<T>(
 ): Promise<T> {
   const url = `${API_BASE}${path}`;
   const res = await fetch(url, {
-    credentials: "include",
     headers: { "Content-Type": "application/json", ...options.headers },
     ...options,
   });
@@ -90,8 +89,8 @@ export async function overrideGate(
  * Get all currently active (unacknowledged) alerts.
  */
 export async function getActiveAlerts(severity?: string): Promise<{ alerts: Alert[]; count: number }> {
-  const qs = severity ? `?severity_filter=${severity}` : "";
-  return apiFetch<{ alerts: Alert[]; count: number }>(`/alerts/active${qs}`);
+  const qs = severity ? `?severity=${severity}` : "";
+  return apiFetch<{ alerts: Alert[]; count: number }>(`/alerts${qs}`);
 }
 
 /**
