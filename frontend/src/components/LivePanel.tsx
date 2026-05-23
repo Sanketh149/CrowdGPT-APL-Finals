@@ -213,7 +213,7 @@ function VideoPlayer({ src, label, camId }: { src: string; label: string; camId:
         muted
         loop
         playsInline
-        className="w-full h-full object-cover"
+        className="w-full h-full object-contain bg-black"
       />
       <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded">
         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
