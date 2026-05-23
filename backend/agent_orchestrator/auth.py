@@ -27,11 +27,9 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_HOURS = 8
 
 _raw_admins = os.getenv("ALLOWED_ADMINS", "")
-# OPEN_ACCESS=true OR ALLOWED_ADMINS=* → any Google account can log in (jury/demo mode)
-OPEN_ACCESS: bool = (
-    os.getenv("OPEN_ACCESS", "false").lower() == "true"
-    or _raw_admins.strip() in ("", "*")
-)
+# Any Google account can log in unless OPEN_ACCESS is explicitly set to "false"
+# ALLOWED_ADMINS is only enforced when OPEN_ACCESS=false
+OPEN_ACCESS: bool = os.getenv("OPEN_ACCESS", "true").lower() != "false"
 ALLOWED_ADMINS: set[str] = set(
     e.strip().lower()
     for e in _raw_admins.split(",")
