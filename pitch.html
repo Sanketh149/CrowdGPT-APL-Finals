@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CrowdGPT — APL Finals</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Display:wght@400;700&family=Roboto+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --g-blue:#1a73e8;
+  --g-red:#ea4335;
+  --g-yellow:#fbbc04;
+  --g-green:#34a853;
+  --g-blue-light:#e8f0fe;
+  --g-red-light:#fce8e6;
+  --g-yellow-light:#fef7e0;
+  --g-green-light:#e6f4ea;
+  --bg:#f8f9fa;
+  --surface:#ffffff;
+  --surface2:#f1f3f4;
+  --border:#dadce0;
+  --text:#202124;
+  --text2:#5f6368;
+  --text3:#80868b;
+  --shadow:0 1px 3px rgba(60,64,67,0.15),0 4px 8px rgba(60,64,67,0.1);
+  --shadow-lg:0 2px 6px rgba(60,64,67,0.15),0 8px 24px rgba(60,64,67,0.12);
+}
+
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow:hidden}
+
+#deck{width:100vw;height:100vh;position:relative}
+
+.slide{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  opacity:0;pointer-events:none;
+  transition:opacity 0.4s ease,transform 0.4s ease;
+  transform:translateX(32px);
+  padding:40px 64px 72px;
+  overflow:hidden;
+  background:var(--bg);
+}
+.slide.active{opacity:1;pointer-events:all;transform:translateX(0)}
+.slide.exit{opacity:0;transform:translateX(-32px)}
+
+/* Google top bar */
+.slide::after{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:4px;
+  background:linear-gradient(90deg,var(--g-blue) 0%,var(--g-red) 33%,var(--g-yellow) 66%,var(--g-green) 100%);
+}
+
+/* Nav */
+#nav{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:12px;
+  background:var(--surface);border:1px solid var(--border);
+  box-shadow:var(--shadow);
+  padding:8px 18px;border-radius:100px;z-index:100;
+}
+#nav button{background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer;padding:4px 8px;border-radius:6px;transition:all 0.2s}
+#nav button:hover{background:var(--surface2);color:var(--text)}
+#counter{font-size:12px;color:var(--text3);font-family:'JetBrains Mono',monospace;min-width:44px;text-align:center}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--border);cursor:pointer;transition:all 0.2s}
+.dot.active{background:var(--g-blue);width:18px;border-radius:3px}
+
+/* Timer */
+
+#slidenum{position:fixed;top:20px;left:28px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;z-index:100}
+
+/* Google logo mark */
+.g-logo{display:flex;gap:3px;align-items:center}
+.g-dot{width:10px;height:10px;border-radius:50%}
+
+/* Typography */
+h1{font-size:clamp(32px,4.5vw,58px);font-weight:800;line-height:1.05;letter-spacing:-0.02em;color:var(--text)}
+h2{font-size:clamp(24px,3vw,42px);font-weight:700;line-height:1.1;letter-spacing:-0.015em;color:var(--text)}
+h3{font-size:clamp(15px,1.4vw,18px);font-weight:600;color:var(--text)}
+p{line-height:1.6;color:var(--text2)}
+
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;
+  padding:4px 12px;border-radius:100px;margin-bottom:14px;
+}
+.chip.blue{background:var(--g-blue-light);color:var(--g-blue)}
+.chip.red{background:var(--g-red-light);color:var(--g-red)}
+.chip.green{background:var(--g-green-light);color:var(--g-green)}
+.chip.yellow{background:var(--g-yellow-light);color:#b06000}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;box-shadow:var(--shadow)}
+.card.blue-accent{border-left:4px solid var(--g-blue)}
+.card.red-accent{border-left:4px solid var(--g-red)}
+.card.green-accent{border-left:4px solid var(--g-green)}
+.card.yellow-accent{border-left:4px solid var(--g-yellow)}
+
+/* Protocol pills */
+.pill{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:12px;letter-spacing:0.08em;padding:5px 14px;border-radius:100px;border:1px solid}
+.pill.normal{background:var(--g-green-light);color:#1e7e34;border-color:rgba(52,168,83,0.3)}
+.pill.caution{background:var(--g-yellow-light);color:#b06000;border-color:rgba(251,188,4,0.4)}
+.pill.evacuate{background:#fff3e0;color:#e65100;border-color:rgba(255,152,0,0.4)}
+.pill.lockdown{background:var(--g-red-light);color:var(--g-red);border-color:rgba(234,67,53,0.3)}
+
+/* Grid */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.flex{display:flex}.flex-col{display:flex;flex-direction:column}
+.gap-2{gap:8px}.gap-3{gap:12px}.gap-4{gap:16px}.gap-6{gap:24px}
+.items-center{align-items:center}.justify-between{justify-content:space-between}
+.flex-1{flex:1}.mt-2{margin-top:8px}.mt-4{margin-top:16px}.mt-6{margin-top:24px}.mt-8{margin-top:32px}
+
+/* Agent badge */
+.agent-row{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border)}
+.agent-color{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* Stat */
+.stat-n{font-size:clamp(36px,4vw,60px);font-weight:900;line-height:1}
+
+/* Divider */
+.vdiv{width:1px;background:var(--border);align-self:stretch}
+
+/* Step number */
+.step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;color:#fff}
+
+/* Animate in */
+.slide.active .ani{animation:fadeUp 0.45s ease forwards}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.d1{animation-delay:.05s;opacity:0}.d2{animation-delay:.12s;opacity:0}.d3{animation-delay:.2s;opacity:0}
+.d4{animation-delay:.28s;opacity:0}.d5{animation-delay:.36s;opacity:0}.d6{animation-delay:.44s;opacity:0}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.pulse{animation:pulse 2s infinite}
+
+#hint{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+<div id="slidenum">01 / --</div>
+<div id="hint">← → to navigate · F = fullscreen</div>
+<div id="deck">
+
+<!-- ══ SLIDE 0: TITLE ══ -->
+<div class="slide active" id="s0" style="justify-content:center;align-items:center;text-align:center">
+  <div class="ani d1 flex items-center gap-3" style="margin-bottom:32px;justify-content:center">
+    <div class="g-logo">
+      <div class="g-dot" style="background:var(--g-blue)"></div>
+      <div class="g-dot" style="background:var(--g-red)"></div>
+      <div class="g-dot" style="background:var(--g-yellow)"></div>
+      <div class="g-dot" style="background:var(--g-green)"></div>
+    </div>
+    <span style="font-size:12px;font-weight:600;color:var(--text2)">Google Cloud · Build with AI · Agentic Premier League 2026</span>
+  </div>
+
+  <div class="ani d2"><div class="chip blue" style="margin:0 auto 20px">Phase 2 · Live Pitch</div></div>
+
+  <h1 class="ani d3" style="font-size:clamp(64px,9vw,110px);letter-spacing:-0.03em">
+    <span style="color:var(--g-blue)">Crowd</span><span style="color:var(--text)">GPT</span>
+  </h1>
+  <h2 class="ani d4" style="font-weight:400;color:var(--text2);margin-top:12px;font-size:clamp(18px,2.2vw,26px)">
+    Agentic Intelligence for Predictive Crowd Safety
+  </h2>
+
+  <div class="ani d5" style="margin-top:48px;padding-top:32px;border-top:1px solid var(--border);text-align:center">
+    <div style="font-size:17px;font-weight:700;color:var(--text);letter-spacing:0.01em">Sanketh Kumar Kistappagari</div>
+    <div style="font-size:12px;color:var(--text3);margin-top:6px;letter-spacing:0.05em">EA Sports &nbsp;·&nbsp; AI &amp; Data Science</div>
+  </div>
+
+  <div style="position:absolute;bottom:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--g-blue) 0%,var(--g-red) 33%,var(--g-yellow) 66%,var(--g-green) 100%)"></div>
+</div>
+
+<!-- ══ SLIDE 1: PROBLEM ══ -->
+<div class="slide" id="s1" style="justify-content:center">
+  <div class="ani d1"><div class="chip red">The Problem</div></div>
+  <h2 class="ani d2" style="font-size:clamp(28px,3.5vw,46px)">Crowd crises happen in <span style="color:var(--g-red)">minutes</span>.<br/>Human response takes longer.</h2>
+
+  <div class="grid-4 ani d3" style="margin-top:32px;gap:16px">
+    <div class="card red-accent" style="padding:28px 24px">
+      <div class="stat-n" style="color:var(--g-red);font-size:56px">63</div>
+      <div style="font-size:14px;font-weight:700;margin-top:10px">Deaths</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5">2010 Kumbh Mela stampede. The data was there. Nobody was watching it intelligently.</div>
+    </div>
+    <div class="card red-accent" style="padding:28px 24px">
+      <div class="stat-n" style="color:var(--g-red);font-size:56px">159</div>
+      <div style="font-size:14px;font-weight:700;margin-top:10px">Deaths</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5">2022 Seoul Itaewon crush. Density sensors existed. No agent to reason over them.</div>
+    </div>
+    <div class="card" style="border-left:4px solid var(--g-red);background:#fff5f5;padding:28px 24px">
+      <div class="stat-n" style="color:var(--g-red);font-size:56px">11</div>
+      <div style="font-size:14px;font-weight:700;margin-top:10px;color:var(--g-red)">Deaths · 50+ Injured</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5"><strong style="color:var(--g-red)">RCB Victory Parade — THIS stadium.</strong> Chinnaswamy 2025. A celebration turned fatal because nobody predicted the surge.</div>
+    </div>
+    <div class="card yellow-accent" style="padding:28px 24px">
+      <div class="stat-n" style="color:#b06000;font-size:56px">90s</div>
+      <div style="font-size:14px;font-weight:700;margin-top:10px">Early Warning</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5">The lead time that separates a managed evacuation from a tragedy.</div>
+    </div>
+  </div>
+
+  <div class="card ani d4" style="margin-top:24px;padding:24px 28px">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:14px">What operators face today</div>
+    <div class="grid-2" style="gap:12px">
+      <div class="flex gap-3 items-center"><span style="color:var(--g-red);font-size:18px;flex-shrink:0">✕</span><span style="font-size:13px">6+ simultaneous data streams — density, weather, gates, threats, routing</span></div>
+      <div class="flex gap-3 items-center"><span style="color:var(--g-red);font-size:18px;flex-shrink:0">✕</span><span style="font-size:13px">Rules-based systems that can't reason about novel situations</span></div>
+      <div class="flex gap-3 items-center"><span style="color:var(--g-red);font-size:18px;flex-shrink:0">✕</span><span style="font-size:13px">Human operators overwhelmed during peak crowd events</span></div>
+      <div class="flex gap-3 items-center"><span style="color:var(--g-red);font-size:18px;flex-shrink:0">✕</span><span style="font-size:13px">No unified protocol that auto-escalates from data to action</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 2: ARCHITECTURE ══ -->
+<div class="slide" id="s2" style="justify-content:center">
+  <div class="ani d1"><div class="chip green">Architecture · Agentic Depth</div></div>
+  <h2 class="ani d2" style="font-size:clamp(28px,3.5vw,46px)">Not a dashboard. <span style="color:var(--g-blue)">An agent team.</span></h2>
+
+  <div class="grid-2 ani d3" style="flex:1;gap:24px;margin-top:28px">
+    <div class="flex-col gap-0" style="justify-content:space-between">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:10px">7 Parallel Agents · Google ADK</div>
+      <div class="agent-row" style="padding:12px 16px;flex:1;margin-bottom:8px"><div class="agent-color" style="background:#1a73e8"></div><div><div style="font-size:13px;font-weight:600">CrowdDensity</div><div style="font-size:11px;color:var(--text3);margin-top:2px">YOLOv8 output → person count/zone → density %, capacity %, trend</div></div></div>
+      <div class="agent-row" style="padding:12px 16px;flex:1;margin-bottom:8px"><div class="agent-color" style="background:#7c4dff"></div><div><div style="font-size:13px;font-weight:600">GateSensor</div><div style="font-size:11px;color:var(--text3);margin-top:2px">YOLOv8 gate boundaries → flow rate = Δcount/min → compression buildup</div></div></div>
+      <div class="agent-row" style="padding:12px 16px;flex:1;margin-bottom:8px"><div class="agent-color" style="background:#00acc1"></div><div><div style="font-size:13px;font-weight:600">WeatherContext</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Heat index + rain prob → covariate fed into LSTM (model trained with weather)</div></div></div>
+      <div class="agent-row" style="padding:12px 16px;flex:1;margin-bottom:8px"><div class="agent-color" style="background:#34a853"></div><div><div style="font-size:13px;font-weight:600">Routing</div><div style="font-size:11px;color:var(--text3);margin-top:2px">CrowdDensity + ThreatDetection (ML-derived) → least-congested evac paths</div></div></div>
+      <div class="agent-row" style="padding:12px 16px;flex:1;margin-bottom:8px"><div class="agent-color" style="background:#ff6d00"></div><div><div style="font-size:13px;font-weight:600">ThreatDetection</div><div style="font-size:11px;color:var(--text3);margin-top:2px">LSTM anomaly score → sudden spike vs baseline → escalates threat signal</div></div></div>
+      <div class="agent-row" style="padding:12px 16px;flex:1;margin-bottom:8px"><div class="agent-color" style="background:#ea4335"></div><div><div style="font-size:13px;font-weight:600">EmergencyProtocol</div><div style="font-size:11px;color:var(--text3);margin-top:2px">All agents + LSTM surge prediction → proactive escalation, not reactive</div></div></div>
+      <div class="agent-row" style="padding:12px 16px;flex:1"><div class="agent-color" style="background:#fbbc04"></div><div><div style="font-size:13px;font-weight:600">Notifier</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Purely downstream → final protocol + alert metadata → SendGrid + PA</div></div></div>
+    </div>
+
+    <div class="flex-col" style="justify-content:space-between">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);margin-bottom:10px">ADK Orchestration Flow</div>
+      <div class="card blue-accent" style="padding:20px 22px;flex:1;margin-bottom:12px;display:flex;flex-direction:column;justify-content:center">
+        <div style="font-size:13px;color:var(--g-blue);font-weight:700;margin-bottom:5px">ParallelAgent</div>
+        <div style="font-size:12px;color:var(--text2)">All 7 agents run simultaneously — total latency = 1 agent, not 7×</div>
+      </div>
+      <div style="text-align:center;color:var(--text3);font-size:20px;margin-bottom:12px">↓</div>
+      <div class="card green-accent" style="padding:20px 22px;flex:1;margin-bottom:12px;display:flex;flex-direction:column;justify-content:center">
+        <div style="font-size:13px;color:var(--g-green);font-weight:700;margin-bottom:5px">Orchestrator</div>
+        <div style="font-size:12px;color:var(--text2)">Synthesizes 7 decisions → unified risk score → protocol escalation</div>
+      </div>
+      <div style="text-align:center;color:var(--text3);font-size:20px;margin-bottom:12px">↓</div>
+      <div class="card yellow-accent" style="padding:20px 22px;flex:1;margin-bottom:16px;display:flex;flex-direction:column;justify-content:center">
+        <div style="font-size:13px;color:#b06000;font-weight:700;margin-bottom:5px">Live SSE Stream</div>
+        <div style="font-size:12px;color:var(--text2)">Decisions pushed real-time to operator dashboard + broadcast screen</div>
+      </div>
+      <div class="card" style="padding:16px 20px;background:var(--g-blue-light);border-color:rgba(26,115,232,0.2)">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--g-blue);margin-bottom:10px">Google Cloud Stack</div>
+        <div class="flex gap-2" style="flex-wrap:wrap">
+          <span style="font-size:11px;background:#fff;border:1px solid var(--border);padding:4px 10px;border-radius:4px;color:var(--text)">Gemini Flash</span>
+          <span style="font-size:11px;background:#fff;border:1px solid var(--border);padding:4px 10px;border-radius:4px;color:var(--text)">Google ADK</span>
+          <span style="font-size:11px;background:#fff;border:1px solid var(--border);padding:4px 10px;border-radius:4px;color:var(--text)">Cloud Run</span>
+          <span style="font-size:11px;background:#fff;border:1px solid var(--border);padding:4px 10px;border-radius:4px;color:var(--text)">Artifact Registry</span>
+          <span style="font-size:11px;background:#fff;border:1px solid var(--border);padding:4px 10px;border-radius:4px;color:var(--text)">SendGrid</span>
+          <span style="font-size:11px;background:#fff;border:1px solid var(--border);padding:4px 10px;border-radius:4px;color:var(--text)">Google OAuth</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 3: FLOW DIAGRAM ══ -->
+<div class="slide" id="s3">
+  <div class="ani d1"><div class="chip green">System Architecture · Flow Diagram</div></div>
+  <h2 class="ani d2">End-to-end <span style="color:var(--g-blue)">agent pipeline</span> — from sensor to action.</h2>
+  <div class="ani d3" style="flex:1;margin-top:16px;border-radius:12px;overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow)">
+    <img src="Final_Flow_Diagram.png" alt="CrowdGPT Flow Diagram" style="width:100%;height:100%;object-fit:contain;background:#1a1a2e;display:block"/>
+  </div>
+</div>
+
+<!-- ══ SLIDE 4: FEATURES ══ -->
+<div class="slide" id="s4" style="justify-content:center">
+  <div class="ani d1"><div class="chip blue">Platform Capabilities</div></div>
+  <h2 class="ani d2" style="font-size:clamp(28px,3.5vw,46px)">Everything an operator needs<br/>to <span style="color:var(--g-green)">prevent</span> the next tragedy.</h2>
+
+  <div class="grid-2 ani d3" style="gap:16px;margin-top:28px;flex:1">
+    <div class="card blue-accent" style="padding:28px 24px">
+      <div style="font-size:28px;margin-bottom:12px">🗺️</div>
+      <h3 style="font-size:16px">Live Zone Map</h3>
+      <p style="font-size:13px;margin-top:8px">Real-time crowd density heatmap across 6 stadium zones. Hotspot detection with capacity %, trend arrows, and congestion levels.</p>
+    </div>
+    <div class="card green-accent" style="padding:28px 24px">
+      <div style="font-size:28px;margin-bottom:12px">🤖</div>
+      <h3 style="font-size:16px">Agent Feed</h3>
+      <p style="font-size:13px;margin-top:8px">Live SSE stream of every agent decision with confidence scores. Color-coded per agent type. Decisions appear in real time.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--g-yellow);padding:28px 24px">
+      <div style="font-size:28px;margin-bottom:12px">🚪</div>
+      <h3 style="font-size:16px">Gate Controls</h3>
+      <p style="font-size:13px;margin-top:8px">Manual override for all stadium gates — open/close with one click. Flow rate, utilisation %, and queue length per gate.</p>
+    </div>
+    <div class="card red-accent" style="padding:28px 24px">
+      <div style="font-size:28px;margin-bottom:12px">🔔</div>
+      <h3 style="font-size:16px">Alert System</h3>
+      <p style="font-size:13px;margin-top:8px">Severity-tagged alerts (critical/high/medium). One-click acknowledge. Notifier agent auto-dispatches SendGrid emails + PA broadcast.</p>
+    </div>
+  </div>
+
+  <div class="card ani d4" style="margin-top:20px;padding:20px 28px;background:var(--g-blue-light);border-color:rgba(26,115,232,0.2)">
+    <div class="flex gap-6 items-center">
+      <div style="text-align:center"><div class="stat-n" style="font-size:36px;color:var(--g-green)">5</div><div style="font-size:11px;color:var(--text3);margin-top:3px">Match Phases</div></div>
+      <div class="vdiv" style="height:40px"></div>
+      <div style="text-align:center"><div class="stat-n" style="font-size:36px;color:var(--g-blue)">7</div><div style="font-size:11px;color:var(--text3);margin-top:3px">AI Agents</div></div>
+      <div class="vdiv" style="height:40px"></div>
+      <div style="text-align:center"><div class="stat-n" style="font-size:36px;color:#b06000">4</div><div style="font-size:11px;color:var(--text3);margin-top:3px">Protocol Levels</div></div>
+      <div class="vdiv" style="height:40px"></div>
+      <div style="text-align:center"><div class="stat-n" style="font-size:36px;color:var(--g-red)">∞</div><div style="font-size:11px;color:var(--text3);margin-top:3px">Scalable</div></div>
+      <div class="vdiv" style="height:40px"></div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:600;margin-bottom:4px">Deployed &amp; Live on Google Cloud Run</div><div style="font-size:11px;color:var(--g-blue);font-family:'JetBrains Mono',monospace">crowdgpt-frontend-255137970778.us-central1.run.app</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 5: DEMO ══ -->
+<div class="slide" id="s5" style="justify-content:center;align-items:center;text-align:center">
+  <div class="ani d1"><div class="chip yellow" style="margin:0 auto 20px">Live Demo</div></div>
+  <h1 class="ani d2" style="font-size:clamp(60px,10vw,120px);font-weight:900;letter-spacing:-0.04em;color:var(--text)">DEMO</h1>
+  <p class="ani d3 mt-4" style="font-size:16px;color:var(--text2)">Switching to live dashboard now.</p>
+  <div class="ani d4 mt-8 card blue-accent" style="display:inline-block;padding:14px 28px;text-align:left">
+    <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Live URL</div>
+    <div style="font-size:13px;font-family:'JetBrains Mono',monospace;color:var(--g-blue)">crowdgpt-frontend-255137970778.us-central1.run.app</div>
+  </div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:6px;background:linear-gradient(90deg,var(--g-blue) 0%,var(--g-red) 33%,var(--g-yellow) 66%,var(--g-green) 100%)"></div>
+</div>
+
+<!-- ══ SLIDE 6: SCALE & BEYOND ══ -->
+<div class="slide" id="s6b" style="justify-content:center">
+  <div class="ani d1"><div class="chip green">Scale & Beyond</div></div>
+  <h2 class="ani d2" style="font-size:clamp(28px,3.5vw,46px)">Production-ready <span style="color:var(--g-blue)">by design</span>.</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr 1fr;gap:16px;flex:1;margin-top:28px">
+    <div class="card blue-accent" style="padding:24px 22px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px">☁️ Cloud Run · Stateless Architecture</div>
+      <p style="font-size:12px;line-height:1.6">Each stadium gets its own orchestrator instance on Cloud Run. Config passed per request — no shared state. Auto-scales to zero between events, handles 10+ concurrent runs at match peaks.</p>
+    </div>
+    <div class="card red-accent" style="padding:24px 22px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px">🧩 Modular · Loosely Coupled Agents</div>
+      <p style="font-size:12px;line-height:1.6">Each agent is an independent LLM-powered unit with a well-defined input/output contract. Swap CrowdDensity for a different model? Zero changes to other agents. Real modularity — not just a buzzword.</p>
+    </div>
+    <div class="card green-accent" style="padding:24px 22px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px">⚡ Event-Driven Pipeline</div>
+      <p style="font-size:12px;line-height:1.6">Every agent cycle is triggered by an event — manual, scheduled, or alert-based. No polling loops. SSE pushes decisions downstream the moment they're ready. The entire system reacts, not polls.</p>
+    </div>
+    <div class="card" style="border-left:4px solid #7c4dff;padding:24px 22px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px">📈 Multi-Stadium Scaling</div>
+      <p style="font-size:12px;line-height:1.6">Same codebase, different stadium config per request. IPL has 10 venues — each gets its own Cloud Run instance with zero code changes. Horizontal scale is free. The orchestrator is the reusable engine.</p>
+    </div>
+    <div class="card yellow-accent" style="padding:24px 22px">
+      <div style="font-size:14px;font-weight:700;margin-bottom:10px">🔄 Resilience · Gemini Fallbacks</div>
+      <p style="font-size:12px;line-height:1.6">Shared <span style="font-family:'JetBrains Mono',monospace">gemini_client.py</span> — detects daily quota exhaustion (returns None, no crash). Rate limits retry with 30s exponential backoff. Agents degrade gracefully. System never goes dark.</p>
+    </div>
+    <div class="card" style="border-left:4px solid var(--g-blue);background:var(--g-blue-light);padding:24px 22px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--g-blue);margin-bottom:12px">Current Trade-offs (honest)</div>
+      <div class="flex-col gap-3">
+        <div class="flex gap-2"><span style="color:var(--g-yellow);flex-shrink:0;font-size:14px">→</span><span style="font-size:12px">Crowd density is simulated — production needs live turnstile/CCTV feed</span></div>
+        <div class="flex gap-2"><span style="color:var(--g-yellow);flex-shrink:0;font-size:14px">→</span><span style="font-size:12px">Gemini free tier quota limits burst capacity — production needs paid quota</span></div>
+        <div class="flex gap-2"><span style="color:var(--g-green);flex-shrink:0;font-size:14px">✓</span><span style="font-size:12px">Agent interface is identical — swapping data source requires zero agent changes</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SLIDE 7: CLOSING ══ -->
+<div class="slide" id="s7" style="justify-content:center;align-items:center;text-align:center">
+  <div class="ani d1"><div class="chip blue" style="margin:0 auto 20px">The Bottom Line</div></div>
+
+  <h1 class="ani d2" style="max-width:780px">
+    At 50,000 capacity,<br/>
+    <span style="color:var(--g-red)">90 seconds</span> of early warning<br/>
+    <span style="color:var(--text2);font-size:0.5em;font-weight:400">saves lives.</span>
+  </h1>
+
+  <p class="ani d3 mt-6" style="font-size:18px;max-width:560px;line-height:1.7;color:var(--text2)">
+    CrowdGPT gives operators that window —<br/>
+    not with rules, but with agents that <strong style="color:var(--text)">reason</strong>.
+  </p>
+
+  <div class="ani d4 flex gap-4 mt-8 justify-between" style="max-width:600px;width:100%">
+    <div class="card blue-accent" style="flex:1;text-align:left">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px">Live at</div>
+      <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--g-blue)">crowdgpt-frontend-255137970778<br/>.us-central1.run.app</div>
+    </div>
+    <div class="card" style="flex:1;text-align:left;border-left:4px solid #333">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:5px">GitHub</div>
+      <div style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--text)">Sanketh149/<br/>CrowdGPT-APL-Finals</div>
+    </div>
+  </div>
+
+  <div class="ani d5 flex gap-3 items-center mt-8">
+    <span class="pill normal pulse">● NORMAL</span>
+    <span style="color:var(--text3);font-size:18px">→</span>
+    <span class="pill lockdown">● LOCKDOWN</span>
+    <span style="color:var(--text3);font-size:13px;margin-left:8px">in one agent cycle.</span>
+  </div>
+
+  <!-- Google colors footer bar -->
+  <div style="position:absolute;bottom:0;left:0;right:0;height:6px;background:linear-gradient(90deg,var(--g-blue) 0%,var(--g-red) 33%,var(--g-yellow) 66%,var(--g-green) 100%)"></div>
+</div>
+
+</div><!-- /deck -->
+
+<div id="nav">
+  <button onclick="prev()">←</button>
+  <div id="dots"></div>
+  <span id="counter">1 / ?</span>
+  <button onclick="next()">→</button>
+</div>
+
+<script>
+const slides=document.querySelectorAll('.slide'),TOTAL=slides.length;
+let cur=0;
+
+const dotsEl=document.getElementById('dots');
+slides.forEach((_,i)=>{const d=document.createElement('div');d.className='dot'+(i===0?' active':'');d.onclick=()=>goTo(i);dotsEl.appendChild(d)});
+document.getElementById('counter').textContent=`1 / ${TOTAL}`;
+document.getElementById('slidenum').textContent=`01 / ${String(TOTAL).padStart(2,'0')}`;
+
+function updateDots(){document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===cur))}
+
+function goTo(n){
+  if(n<0||n>=TOTAL)return;
+  const p=slides[cur];p.classList.remove('active');p.classList.add('exit');
+  setTimeout(()=>p.classList.remove('exit'),450);
+  cur=n;slides[cur].classList.add('active');
+  document.getElementById('counter').textContent=`${cur+1} / ${TOTAL}`;
+  document.getElementById('slidenum').textContent=`${String(cur+1).padStart(2,'0')} / ${String(TOTAL).padStart(2,'0')}`;
+  updateDots();
+}
+function next(){goTo(cur+1)}function prev(){goTo(cur-1)}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();next()}
+  if(e.key==='ArrowLeft'){e.preventDefault();prev()}
+  if(e.key==='f'||e.key==='F')toggleFS();
+});
+
+function toggleFS(){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>{})}
+setTimeout(()=>{const h=document.getElementById('hint');h.style.opacity='0';h.style.transition='opacity 1s'},4000);
+</script>
+</body>
+</html>
