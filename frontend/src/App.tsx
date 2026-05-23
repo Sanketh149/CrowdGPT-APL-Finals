@@ -9,12 +9,11 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import BroadcastScreen from "./pages/BroadcastScreen";
 import { StatusBar } from "./components/StatusBar";
-import { StadiumMap } from "./components/StadiumMap";
 import { AgentFeed } from "./components/AgentFeed";
 import { GateControls } from "./components/GateControls";
 import { AlertPanel } from "./components/AlertPanel";
 import { useAgentStream } from "./hooks/useAgentStream";
-import { VideoFeed } from "./components/VideoFeed";
+import { LivePanel } from "./components/LivePanel";
 import {
   getSystemStatus,
   runOrchestrator,
@@ -232,14 +231,9 @@ function Dashboard() {
 
       {/* Main content grid */}
       <main className="flex-1 grid grid-cols-12 gap-2.5 p-2.5 min-h-0">
-        {/* Left column: Video Feed + Stadium Map stacked */}
-        <section className="col-span-12 lg:col-span-5 xl:col-span-5 flex flex-col gap-2.5">
-          <div className="flex-[2] min-h-0">
-            <VideoFeed zones={zones} />
-          </div>
-          <div className="flex-[3] min-h-0">
-            <StadiumMap zones={zones} />
-          </div>
+        {/* Left column: Live Panel (Live Feed / Stadium Map / YOLO toggle) */}
+        <section className="col-span-12 lg:col-span-5 xl:col-span-5 min-h-[500px] lg:h-auto">
+          <LivePanel zones={zones} />
         </section>
 
         {/* Middle column: Agent Feed */}
