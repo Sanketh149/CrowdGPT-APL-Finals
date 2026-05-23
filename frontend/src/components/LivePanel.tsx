@@ -267,7 +267,7 @@ export function LivePanel({ zones }: Props) {
   const isLive = view !== "stadium";
 
   return (
-    <div className="rounded-xl border border-gray-700 flex flex-col overflow-hidden" style={{ background: "#0d1420", height: "700px" }}>
+    <div className="rounded-xl border border-gray-700 flex flex-col overflow-hidden" style={{ background: "#0d1420", height: "680px" }}>
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-700/60 shrink-0 min-w-0">
         <div className="flex items-center gap-1.5 shrink-0">

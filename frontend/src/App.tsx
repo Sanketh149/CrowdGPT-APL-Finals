@@ -230,14 +230,14 @@ function Dashboard() {
       </div>
 
       {/* Main content grid */}
-      <main className="flex-1 grid grid-cols-12 gap-2.5 p-2.5" style={{ gridAutoRows: "700px" }}>
+      <main className="grid grid-cols-12 gap-2.5 p-2.5">
         {/* Left column: Live Panel (Live Feed / Stadium Map / YOLO toggle) */}
         <section className="col-span-12 lg:col-span-5 xl:col-span-5">
           <LivePanel zones={zones} />
         </section>
 
         {/* Middle column: Agent Feed */}
-        <section className="col-span-12 lg:col-span-4 xl:col-span-4">
+        <section className="col-span-12 lg:col-span-4 xl:col-span-4" style={{ height: "680px" }}>
           <AgentFeed
             decisions={decisions}
             isConnected={isConnected}
@@ -246,7 +246,7 @@ function Dashboard() {
         </section>
 
         {/* Right column: Gate Controls + Alerts */}
-        <section className="col-span-12 lg:col-span-3 xl:col-span-3 flex flex-col gap-2.5">
+        <section className="col-span-12 lg:col-span-3 xl:col-span-3 flex flex-col gap-2.5" style={{ height: "680px" }}>
           <div className="flex-1 min-h-0">
             <GateControls gates={gates} onGateChange={handleGateChange} />
           </div>
