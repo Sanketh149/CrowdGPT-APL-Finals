@@ -155,7 +155,7 @@ function Dashboard() {
     try {
       const result = await runOrchestrator({
         match_id: "IPL_2026_FINAL",
-        stadium_id: "narendra_modi_stadium",
+        stadium_id: "chinnaswamy_stadium",
         phase,
         trigger: "manual",
       });
@@ -232,12 +232,12 @@ function Dashboard() {
 
       {/* Main content grid — LivePanel expands to 8 cols in split view */}
       <main className="grid grid-cols-12 gap-2.5 p-2.5">
-        <section className={`col-span-12 ${liveView === "split" ? "lg:col-span-8" : "lg:col-span-5"} transition-all`}>
+        <section className={`col-span-12 ${liveView === "split" ? "lg:col-span-7" : "lg:col-span-5"} transition-all`}>
           <LivePanel zones={zones} onViewChange={setLiveView} />
         </section>
 
         {/* Middle column: Agent Feed */}
-        <section className={`col-span-12 ${liveView === "split" ? "lg:col-span-2" : "lg:col-span-4"} transition-all`} style={{ height: "680px" }}>
+        <section className={`col-span-12 ${liveView === "split" ? "lg:col-span-3" : "lg:col-span-4"} transition-all`} style={{ height: "680px" }}>
           <AgentFeed
             decisions={decisions}
             isConnected={isConnected}

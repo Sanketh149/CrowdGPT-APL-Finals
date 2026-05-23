@@ -15,9 +15,9 @@ from tools.sensor_tools import get_zone_density_tool
 
 logger = logging.getLogger(__name__)
 
-# Narendra Modi Stadium, Ahmedabad coordinates
-STADIUM_LAT = 23.0920
-STADIUM_LON = 72.5934
+# M. Chinnaswamy Stadium, Bangalore coordinates
+STADIUM_LAT = 12.9792
+STADIUM_LON = 77.5997
 
 WEATHER_CONTEXT_PROMPT = """
 You are the Weather Context Specialist for CrowdGuard Command.

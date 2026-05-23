@@ -64,7 +64,7 @@ export function StatusBar({ status, isConnected }: Props) {
           </div>
           <div>
             <p className="text-white font-bold text-sm leading-tight tracking-tight">CrowdGPT</p>
-            <p className="text-gray-500 text-[9px] tracking-wider uppercase">Narendra Modi Stadium · IPL 2026</p>
+            <p className="text-gray-500 text-[9px] tracking-wider uppercase">M. Chinnaswamy Stadium · IPL 2026</p>
           </div>
         </div>
       </div>

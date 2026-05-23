@@ -125,6 +125,48 @@ class NotifierAgent:
 
         logger.info(f"NotifierAgent: Dispatching {len(alerts)} alert(s) — protocol={protocol}")
 
+        # Collect zone density data from monitoring results
+        crowd_meta = {}
+        for m in state.get("monitoring", []):
+            if isinstance(m, dict) and m.get("agent") == "crowd_density":
+                crowd_meta = m.get("metadata", {})
+                break
+
+        # Build rich context to pass into each alert for richer emails
+        rich_context = {
+            "protocol": protocol,
+            "risk_score": risk_score,
+            "anomalies": anomalies,
+            "gate_actions": gate_actions,
+            "zones": crowd_meta.get("zones", []),
+            "hotspots": crowd_meta.get("hotspots", []),
+            "resources_deployed": emergency_meta.get("resources_deployed", {}),
+            "staff_instructions": emergency_meta.get("staff_instructions", ""),
+            "match_id": state.get("match_id", "IPL_2026_FINAL"),
+            "phase": state.get("phase", "mid_match"),
+        }
+
+        # Actually send each alert (triggers SendGrid email for field_staff/public_pa/all)
+        dispatch_results = []
+        for alert in alerts:
+            alert["context"] = rich_context
+            try:
+                result = dispatch_alert_tool(
+                    severity=alert["severity"],
+                    channel=alert["channel"],
+                    message=alert["message"],
+                    zone_id=alert.get("zone_id"),
+                    actions_required=alert.get("actions_required"),
+                    context=rich_context,
+                )
+                dispatch_results.append(result)
+                logger.info(
+                    f"Alert dispatched: {result['alert_id']} → {alert['channel']} "
+                    f"({result.get('dispatch_status', 'unknown')})"
+                )
+            except Exception as e:
+                logger.error(f"Failed to dispatch alert to {alert['channel']}: {e}")
+
         return {
             "agent": "notifier",
             "timestamp": timestamp,
@@ -135,6 +177,7 @@ class NotifierAgent:
                 "protocol": protocol,
                 "risk_score": risk_score,
                 "channels_notified": list({a["channel"] for a in alerts}),
+                "dispatch_results": dispatch_results,
             },
         }
 

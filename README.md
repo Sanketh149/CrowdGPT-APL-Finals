@@ -1,110 +1,94 @@
-# CrowdGuard Command
+# CrowdGPT — Agentic Intelligence for Predictive Crowd Safety
 
-> **Agentic Premier League Finale — Google Cloud Build with AI**
+> **Google Cloud Agentic Premier League Finale 2026**
 >
-> A real-time, multi-agent crowd safety and operations command platform for large-scale cricket stadiums.
+> A real-time, multi-agent AI platform that monitors, predicts, and responds to crowd safety events at large-scale cricket stadiums — powered by Google ADK, Gemini 2.5 Flash, and Google Cloud Run.
 
 ---
 
 ## The Problem
 
-Massive crowds at cricket matches create dangerous bottlenecks, severe security vulnerabilities, and logistical chaos during pre- and post-match movements. Current stadium operations rely on **fragmented, manual systems** leaving security and volunteers unable to adapt instantly to crowd surges, weather shifts, or emerging threats.
+Massive crowds at cricket matches (M. Chinnaswamy Stadium holds **40,000 fans**) create dangerous bottlenecks, security blind spots, and logistical chaos during pre- and post-match movements. Current stadium operations rely on **fragmented, manual systems** — leaving safety teams unable to react instantly to crowd surges, weather shifts, or emerging threats.
 
-**Organizers urgently need** an integrated, real-time command platform to unify ticketing, dynamically route crowd flow, and automate emergency responses for a safe and seamless fan experience.
+Operators need an integrated, AI-driven command platform that unifies crowd monitoring, dynamically routes fan flow, and automates emergency response — all in real time.
 
 ---
 
 ## The Solution
 
-CrowdGuard Command is a **multi-agent AI system** built on Google Cloud and powered by Gemini + ADK. A single Orchestrator Agent coordinates a team of specialist agents that continuously monitor crowd conditions, make routing decisions, detect threats, and execute emergency protocols — all surfaced through a unified operator dashboard.
+**CrowdGPT** is a multi-agent AI system built on **Google ADK** and powered by **Gemini 2.5 Flash**. A master Orchestrator Agent coordinates a team of specialist agents that continuously monitor crowd conditions, make routing decisions, detect threats, and execute emergency protocols — surfaced through a live operator dashboard with real-time camera feeds, YOLOv8 + LSTM detection, and zone-level density heatmaps.
+
+---
+
+## Live Demo
+
+| Service | URL |
+|---------|-----|
+| **Operator Dashboard** | `https://crowdgpt-frontend-<hash>.run.app/dashboard` |
+| **Backend API** | `https://crowdgpt-backend-<hash>.run.app` |
+| **Broadcast Screen** | `https://crowdgpt-frontend-<hash>.run.app/screen` |
 
 ---
 
 ## Architecture
 
-### High-Level System Overview
-
-![CrowdGuard Command Architecture](docs/architecture/Final_Flow_Diagram.png)
+### Agent Hierarchy
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        DATA INGESTION                           │
-│   Simulated Sensors  │  Gate Cameras  │  Ticketing System       │
-└──────────────┬──────────────┬──────────────────────────────────-┘
-               │              │
-               ▼              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    ORCHESTRATOR AGENT                           │
-│            (Google ADK — Gemini 1.5 Pro)                        │
-│                                                                 │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │              ParallelAgent (Monitoring)                  │   │
-│   │                                                         │   │
-│   │  ┌─────────────┐ ┌─────────────┐ ┌─────────────────┐   │   │
-│   │  │Crowd Density│ │ Gate Sensor │ │ Weather Context │   │   │
-│   │  │   Agent     │ │   Agent     │ │     Agent       │   │   │
-│   │  └──────┬──────┘ └──────┬──────┘ └────────┬────────┘   │   │
-│   └─────────┼───────────────┼─────────────────┼────────────┘   │
-│             └───────────────┴─────────────────┘                │
-│                             │ threshold breach                  │
-│             ┌───────────────▼─────────────────────────────┐    │
-│             │        SequentialAgent (Response)            │    │
-│             │                                              │    │
-│             │  [1] Routing Agent   → Gate open/close cmds  │    │
-│             │  [2] Threat Agent    → Risk score + alerts   │    │
-│             │  [3] Emergency Agent → Protocol activation   │    │
-│             │  [4] Notifier Agent  → Operator + staff msgs │    │
-│             └──────────────────────────────────────────────┘    │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │
+┌──────────────────────────────────────────────────────────────────┐
+│                       ORCHESTRATOR AGENT                         │
+│                  (Google ADK — Gemini 2.5 Flash)                 │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │                 ParallelAgent — Monitoring                  │  │
+│  │                                                            │  │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌─────────────────┐  │  │
+│  │  │ Crowd Density│  │ Gate Sensor  │  │ Weather Context │  │  │
+│  │  │    Agent     │  │    Agent     │  │     Agent       │  │  │
+│  │  └──────┬───────┘  └──────┬───────┘  └───────┬─────────┘  │  │
+│  └─────────┼─────────────────┼──────────────────┼────────────┘  │
+│            └─────────────────┴──────────────────┘               │
+│                              │ threshold breach (density > 65%)  │
+│            ┌─────────────────▼────────────────────────────┐     │
+│            │        SequentialAgent — Response Chain        │     │
+│            │                                               │     │
+│            │  [1] Routing Agent     → Gate commands        │     │
+│            │  [2] Threat Detection  → Risk score 0-100     │     │
+│            │  [3] Emergency Protocol→ Playbook activation  │     │
+│            │  [4] Notifier Agent    → SendGrid email alerts│     │
+│            └───────────────────────────────────────────────┘     │
+└──────────────────────────────┬───────────────────────────────────┘
+                               │  SSE stream
                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                   OPERATOR DASHBOARD                            │
-│   Live map  │  Agent decisions  │  Gate states  │  Override     │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                      OPERATOR DASHBOARD                          │
+│  Stadium Heatmap │ YOLOv8+LSTM │ Agent Feed │ Gate Controls      │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### Agent Responsibilities
 
-| Agent | Role | ADK Type |
-|-------|------|----------|
-| **Orchestrator** | Receives all events, delegates to specialists, manages state | `LlmAgent` |
-| **Crowd Density Agent** | Analyzes sensor/video frames, computes density & flow vectors per zone | `ParallelAgent` member |
-| **Gate Sensor Agent** | Monitors gate-level throughput, detects bottlenecks | `ParallelAgent` member |
-| **Weather Context Agent** | Fetches live weather, flags conditions affecting crowd behavior | `ParallelAgent` member |
-| **Routing Agent** | Recommends gate open/close/redirect decisions from density data | `SequentialAgent` step 1 |
-| **Threat Detection Agent** | Assigns risk scores, detects anomalies (sudden acceleration, dense clusters) | `SequentialAgent` step 2 |
-| **Emergency Protocol Agent** | Triggers predefined playbooks (evacuation, medical, lockdown) | `SequentialAgent` step 3 |
-| **Notifier Agent** | Formats and dispatches alerts to operators and field staff via Gemini | `SequentialAgent` step 4 |
+| Agent | Role | ADK Pattern |
+|-------|------|------------|
+| **Orchestrator** | Master coordinator — delegates, manages state, escalates | `LlmAgent` |
+| **Crowd Density** | Zone-level density, flow vectors, hotspot detection | `ParallelAgent` member |
+| **Gate Sensor** | Gate throughput, bottleneck detection, queue depth | `ParallelAgent` member |
+| **Weather Context** | Live weather via open-meteo API, flags conditions affecting crowd | `ParallelAgent` member |
+| **Routing** | Gate open/close/redirect recommendations from density data | `SequentialAgent` step 1 |
+| **Threat Detection** | Risk score 0–100, anomaly detection (surges, clustering) | `SequentialAgent` step 2 |
+| **Emergency Protocol** | Triggers NORMAL / CAUTION / EVACUATE / LOCKDOWN playbooks | `SequentialAgent` step 3 |
+| **Notifier** | Gemini-generated HTML alerts via SendGrid to operators + staff | `SequentialAgent` step 4 |
 
-### Data Flow
+### Why This Architecture?
 
-```mermaid
-flowchart TD
-    A[Sensor Feed / Simulated Data] --> B[Orchestrator Agent]
+**Why ParallelAgent for monitoring?**
+Crowd density, gate throughput, and weather are independent data streams. Running them in parallel reflects real stadium ops — you don't wait for one sensor before reading another.
 
-    B --> C{ParallelAgent\nMonitoring}
-    C --> D[Crowd Density Agent]
-    C --> E[Gate Sensor Agent]
-    C --> F[Weather Context Agent]
+**Why SequentialAgent for response?**
+Response actions have strict ordering: routing decisions must precede threat assessment, which must precede protocol activation, which must precede notifications. Sequential ordering prevents conflicting instructions reaching the field.
 
-    D --> G{Threshold\nBreached?}
-    E --> G
-    F --> G
-
-    G -- No --> C
-    G -- Yes --> H{SequentialAgent\nResponse Chain}
-
-    H --> I[Routing Agent\nGate Commands]
-    I --> J[Threat Detection Agent\nRisk Score]
-    J --> K[Emergency Protocol Agent\nPlaybook Trigger]
-    K --> L[Notifier Agent\nAlerts Dispatched]
-
-    L --> M[Operator Dashboard]
-    I --> M
-    J --> M
-    K --> M
-```
+**Why YOLO + LSTM?**
+YOLO answers *"how many people are where right now?"* — a spatial, per-frame view. LSTM answers *"is this pattern anomalous given the last 30 seconds?"* — a temporal view. A crowd can be dense but stable (safe), or sparse but accelerating (dangerous). You need both lenses.
 
 ---
 
@@ -114,190 +98,241 @@ flowchart TD
 | Component | Technology |
 |-----------|-----------|
 | Agent Framework | **Google ADK** (Agent Development Kit) |
-| LLM | **Gemini 1.5 Pro** via Vertex AI |
-| API Server | **Python / FastAPI** |
-| Video/Sensor Processing | **OpenCV + YOLOv8** |
-| Crowd Analytics | Custom density & flow vector computation |
+| LLM | **Gemini 2.5 Flash** via Google AI Studio |
+| API Server | **FastAPI + Uvicorn** |
+| Auth | **Google OAuth 2.0** + JWT httpOnly cookie |
+| Email Alerts | **SendGrid** — HTML email with zone data, anomalies, gate actions |
+| Crowd Detection | **YOLOv8n + LSTM** — spatial detection + temporal anomaly |
 
 ### Frontend
 | Component | Technology |
 |-----------|-----------|
-| Framework | **React + TypeScript** |
-| Dashboard | Live map with zone overlays, gate state controls |
-| Real-time Updates | WebSocket / SSE |
+| Framework | **React 18 + TypeScript + Vite** |
+| Styling | **Tailwind CSS** |
+| Real-time | **SSE** (Server-Sent Events) for agent decision stream |
+| Live Views | Stadium heatmap, YOLOv8+LSTM canvas, 4 GCS video feeds |
+| Auth | Google OAuth → JWT cookie → `ProtectedRoute` |
 
 ### Google Cloud Platform
-| Service | Purpose |
-|---------|---------|
-| **Cloud Run** | Serverless hosting for all microservices |
-| **Cloud Build** | CI/CD pipeline |
-| **Artifact Registry** | Container image storage |
-| **Cloud Storage** | Sensor data bus between services |
-| **Eventarc** | Event-driven triggers between services |
-| **Secret Manager** | API keys and credentials |
-| **Vertex AI** | Gemini model serving |
+
+| Service | How it's used |
+|---------|--------------|
+| **Cloud Run** | Serverless container hosting for backend (FastAPI) and frontend (Nginx). Auto-scales to zero, min 1 instance kept warm for demo. |
+| **Artifact Registry** | Docker image storage for both backend and frontend container images (`us-central1-docker.pkg.dev`). |
+| **Secret Manager** | Stores all secrets at rest — `GOOGLE_API_KEY`, `GOOGLE_CLIENT_SECRET`, `JWT_SECRET`, `SENDGRID_API_KEY`. Mounted as env vars at Cloud Run runtime via `--set-secrets`. |
+| **Cloud Storage (GCS)** | Hosts 4 stadium video feeds served directly via public GCS URLs (`storage.googleapis.com/crowdgpt-media-2026/videos/`). Also used as sensor data bus. |
+| **Google OAuth 2.0** | Full OAuth 2.0 PKCE flow — Google consent screen → backend `/auth/callback` → JWT httpOnly cookie (`cg_session`). Role-based: `ADMIN` / `SUPER_ADMIN`. |
+| **Gemini 2.5 Flash** | LLM backbone for all 8 agents via `google-generativeai` SDK. Used for operator message generation (Notifier), routing decisions, threat scoring, and emergency protocol selection. |
+| **Google ADK** | Agent Development Kit — `LlmAgent`, `ParallelAgent`, `SequentialAgent` compose the full multi-agent hierarchy. |
+| **Cloud Build** | CI/CD pipeline (`infra/cloudbuild.yaml`) — builds and deploys all services on `gcloud builds submit`. |
+| **Open-Meteo API** | Free weather API called by the Weather Context agent for live Bangalore conditions (latitude 12.9792°N, longitude 77.5997°E). |
 
 ---
 
 ## Project Structure
 
 ```
-crowdguard-command/
+crowdgpt/
 ├── backend/
 │   ├── agent_orchestrator/
-│   │   ├── orchestrator.py        # Master orchestrator agent
+│   │   ├── main.py                # FastAPI app + all REST endpoints
+│   │   ├── orchestrator.py        # Master orchestrator (ADK)
+│   │   ├── auth.py                # Google OAuth 2.0 + JWT
+│   │   ├── broadcast.py           # SSE broadcast manager
 │   │   ├── agents/
-│   │   │   ├── crowd_density.py   # Crowd density specialist
-│   │   │   ├── gate_sensor.py     # Gate monitoring specialist
-│   │   │   ├── weather_context.py # Weather context specialist
-│   │   │   ├── routing.py         # Dynamic routing specialist
-│   │   │   ├── threat_detection.py# Threat detection specialist
-│   │   │   ├── emergency.py       # Emergency protocol specialist
-│   │   │   └── notifier.py        # Notification specialist
+│   │   │   ├── crowd_density.py
+│   │   │   ├── gate_sensor.py
+│   │   │   ├── weather_context.py
+│   │   │   ├── routing.py
+│   │   │   ├── threat_detection.py
+│   │   │   ├── emergency.py
+│   │   │   └── notifier.py        # Gemini-generated alert emails
 │   │   └── tools/
-│   │       ├── sensor_tools.py    # Sensor data access tools
-│   │       ├── gate_control.py    # Gate open/close tools
-│   │       └── alert_tools.py     # Alert dispatch tools
-│   ├── video_processor/
-│   │   ├── main.py                # FastAPI service
-│   │   ├── yolo_analyzer.py       # YOLOv8 crowd detection
-│   │   └── flow_vectors.py        # Crowd flow computation
+│   │       ├── sensor_tools.py    # Simulated sensor data per phase
+│   │       ├── gate_control.py    # Gate open/close state
+│   │       └── alert_tools.py     # SendGrid dispatch + email template
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
+│   │   ├── App.tsx                # Routes + Dashboard layout
+│   │   ├── api.ts                 # Typed fetch client
 │   │   ├── components/
-│   │   │   ├── StadiumMap.tsx      # Live zone map
-│   │   │   ├── AgentFeed.tsx       # Real-time agent decision log
-│   │   │   ├── GateControls.tsx    # Gate override panel
-│   │   │   └── AlertPanel.tsx      # Active alerts
-│   │   └── app/
-│   ├── package.json
-│   └── Dockerfile
+│   │   │   ├── LivePanel.tsx      # Stadium map, YOLO canvas, video feeds
+│   │   │   ├── StadiumMap.tsx     # SVG zone heatmap
+│   │   │   ├── AgentFeed.tsx      # Real-time decision stream
+│   │   │   ├── GateControls.tsx   # Gate override panel
+│   │   │   ├── AlertPanel.tsx     # Active alert list
+│   │   │   └── StatusBar.tsx      # Header — phase, risk, protocol badge
+│   │   ├── context/AuthContext.tsx
+│   │   ├── hooks/
+│   │   │   ├── useAgentStream.ts  # SSE subscription
+│   │   │   └── useBroadcast.ts    # Broadcast screen SSE
+│   │   └── pages/
+│   │       ├── LoginPage.tsx
+│   │       └── BroadcastScreen.tsx
+│   ├── Dockerfile
+│   └── vite.config.ts
 ├── infra/
-│   ├── cloudbuild.yaml            # GCP CI/CD pipeline
-│   └── terraform/                 # IaC for GCP resources
-├── docs/
-│   └── architecture/
-│       └── agent-flow.png
-├── docker-compose.yml             # Local development
+│   ├── cloudbuild.yaml
+│   └── docker-compose.yml
+├── deploy.sh                      # One-shot Cloud Run deployment
 └── README.md
 ```
 
 ---
 
-## Getting Started
+## Local Development
 
 ### Prerequisites
 - Python 3.11+
 - Node.js 20+
-- Google Cloud SDK (`gcloud`)
-- Docker
+- Docker Desktop
+- `gcloud` CLI authenticated
 
-### Local Development
+### Backend
 
 ```bash
-# Clone the repo
-git clone https://github.com/YOUR_USERNAME/crowdguard-command.git
-cd crowdguard-command
+cd backend
+pip install -r requirements.txt
 
-# Set up environment variables
-cp backend/.env.example backend/.env
-# Add your GOOGLE_API_KEY and GCP project details
+# Copy and fill in your keys
+cp .env.example .env
+# Required: GOOGLE_API_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET,
+#           JWT_SECRET, SENDGRID_API_KEY, ALLOWED_ADMINS
 
-# Start all services
-docker-compose up
+cd agent_orchestrator
+uvicorn main:app --reload --port 8000
+```
 
-# Frontend available at: http://localhost:3000
-# Backend API at:        http://localhost:8000
-# Agent dashboard at:    http://localhost:8000/agents
+### Frontend
+
+```bash
+cd frontend
+npm install
+
+# API URL for local dev (default)
+echo "VITE_API_URL=http://localhost:8000" > .env.local
+
+npm run dev
+# → http://localhost:5173
 ```
 
 ### Environment Variables
 
+Create `backend/.env` with:
+
 ```env
+# Google AI
 GOOGLE_API_KEY=your_gemini_api_key
-GCP_PROJECT_ID=your_project_id
-GCP_REGION=us-central1
-VERTEX_AI_LOCATION=us-central1
+GEMINI_MODEL=gemini-2.5-flash
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_client_secret
+OAUTH_REDIRECT_URI=http://localhost:8000/auth/callback
+
+# Auth
+JWT_SECRET=your_random_secret
+ALLOWED_ADMINS=your@email.com
+ADMIN_ROLES=your@email.com:SUPER_ADMIN
+
+# Frontend
+FRONTEND_URL=http://localhost:5173
+ALLOWED_ORIGINS=http://localhost:5173
+
+# SendGrid
+SENDGRID_API_KEY=SG.your_key
+ALERT_EMAIL_FROM=your_verified@email.com
+ALERT_EMAIL_TO=your@email.com
+
+# GCP
+GCP_PROJECT_ID=your-project-id
+GCS_BUCKET_NAME=your-bucket
+COOKIE_SECURE=false
 ```
 
 ---
 
-## GCP Deployment
+## Cloud Run Deployment
+
+### How env vars are handled
+
+| Type | Mechanism |
+|------|-----------|
+| **Secrets** (API keys, JWT, OAuth secret, SendGrid) | Google Secret Manager → mounted at runtime via `--set-secrets` |
+| **Config** (email, admins, model name) | `--set-env-vars` on Cloud Run service |
+| **Frontend** (`VITE_API_URL`) | Build arg baked into Nginx bundle at `docker build` time |
+
+### Deploy (one command)
 
 ```bash
-# Authenticate
+# 1. Authenticate
 gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
+gcloud config set project bnb-marathon-478217
+gcloud auth configure-docker us-central1-docker.pkg.dev
 
-# Deploy via Cloud Build
-gcloud builds submit --config infra/cloudbuild.yaml
-
-# Services deployed to Cloud Run:
-# - crowdguard-orchestrator
-# - crowdguard-video-processor
-# - crowdguard-frontend
+# 2. Run deploy script
+./deploy.sh
 ```
+
+The script:
+1. Creates Artifact Registry repo if needed
+2. Stores all secrets in Secret Manager (idempotent)
+3. Builds + pushes backend image, deploys to Cloud Run
+4. Builds + pushes frontend image with `VITE_API_URL` baked in, deploys to Cloud Run
+5. Patches backend with real frontend URL (CORS + OAuth redirect)
+6. Prints both URLs and the OAuth callback to register
+
+### After deploy — one manual step
+
+Add the backend callback URL to Google Cloud Console:
+1. Go to [APIs & Credentials](https://console.cloud.google.com/apis/credentials)
+2. Edit your OAuth 2.0 Client ID
+3. Add to **Authorized redirect URIs**: `https://crowdgpt-backend-<hash>.run.app/auth/callback`
 
 ---
 
 ## Key Design Decisions
 
-### Why Orchestrator + Specialists over a Pipeline?
-A hierarchical architecture gives the Orchestrator genuine intelligence — it decides *which* agents to run, *when*, and in *what order*, based on the current situation. A pipeline just passes data forward. The Orchestrator can escalate directly from Crowd Density to Emergency if density is critically high, skipping intermediate steps — that's agentic behavior, not scripted flow.
+### Threshold-based escalation
+The orchestrator only activates the response chain when crowd density exceeds 65% **or** a manual trigger is issued. Below threshold, monitoring agents run in continuous parallel — low cost, high visibility. This mirrors how real stadium ops centers work.
 
-### Why ParallelAgent for Monitoring?
-Crowd density, gate throughput, and weather are independent data streams. Running them in parallel reflects real stadium operations — you don't wait for one sensor before reading another.
+### Simulated sensor data
+Each match phase (`pre_match`, `match_start`, `mid_match`, `match_end`, `post_match`) has distinct density profiles baked into `sensor_tools.py`. This guarantees a reliable, deterministic demo path without needing real hardware — while the agent reasoning and LLM decisions remain fully live.
 
-### Why SequentialAgent for Response?
-Response actions have strict ordering: you can't dispatch emergency protocols before you know the routing decisions, and you can't notify staff before protocols are chosen. Sequential ordering prevents conflicting instructions reaching the field.
+### SendGrid email richness
+Notifier agent uses Gemini to write the operator message text, then the email template injects: zone density table with capacity bars, anomaly list, gate reconfigurations, resources deployed, IST timestamp, and required actions. The email is fully self-contained — a safety officer on their phone gets everything they need.
 
-### Why drop the News Gathering Agent?
-Cricket matches are ticketed scheduled events — attendance and match timing are known in advance. A news agent adds external dependency with zero decision value. Weather is handled directly via API, giving actionable data (rain → shift crowd to covered exits) rather than headlines.
-
-### Why YOLO + LSTM together?
-YOLO answers *"how many people are where right now?"* — a spatial, per-frame view. LSTM answers *"is this pattern anomalous given the last 30 seconds?"* — a temporal view. A crowd can be dense but stable (safe) or sparse but accelerating (dangerous). You need both to distinguish between the two. YOLO outputs feed directly into the LSTM as time-series features: density, flow magnitude, acceleration, gate pressure per zone.
+### SSE over WebSocket
+Server-Sent Events are simpler, reconnect automatically, and are one-directional (server → client) which matches the agent decision stream perfectly. No need for a persistent bidirectional channel.
 
 ---
 
-## Security & Code Quality
+## Rubric Alignment
 
-This codebase uses an **automated AI security review** on every commit and push. Before any code reaches the repository, a security-review skill scans for:
-
-- Secrets and credentials accidentally committed (API keys, tokens, `.env` files)
-- OWASP Top 10 vulnerabilities — injection, XSS, insecure deserialization, broken auth
-- SSRF risks in any code making outbound HTTP calls (agent tool calls, weather API)
-- Unsafe cryptography or direct data exposure
-- Input validation gaps at system boundaries (API endpoints, file uploads)
-
-This runs as a pre-commit/pre-push hook via Claude Code's `ecc:security-review` skill — no code ships without passing the security scan. This directly addresses the **Scalability & Security (10 pts)** rubric criterion.
-
----
-
-## Scoring Alignment
-
-| Criteria | How CrowdGuard Command addresses it |
-|----------|-------------------------------------|
-| **Functional Fulfillment (15 pts)** | Directly solves: real-time routing, threat detection, emergency automation |
-| **Scalability & Security (10 pts)** | Cloud Run auto-scales; Secret Manager for credentials; automated AI security review on every commit (pre-commit hook) |
-| **Static Code Analysis (15 pts)** | Clean repo structure; Google ADK + Gemini SDK usage throughout |
-| **GCP Deployment Bonus (5 pts)** | Full Cloud Run deployment with Cloud Build CI/CD |
-| **Innovation & Agentic Depth (15 pts)** | Multi-agent hierarchy with ParallelAgent + SequentialAgent, genuine decision-making |
-| **Live Demo (10 pts)** | Simulated sensor data ensures reliable happy path demo |
-| **Q&A Defense (15 pts)** | Clear architectural rationale for every agent and design choice |
+| Criteria | How CrowdGPT addresses it |
+|----------|--------------------------|
+| **Functional Fulfillment (15 pts)** | End-to-end: density monitoring → routing → threat detection → emergency protocol → email alerts, all live |
+| **Scalability & Security (10 pts)** | Cloud Run auto-scales (min 1, max 10 instances); **Secret Manager** for all credentials (zero secrets in code or images); **Google OAuth 2.0** with role-based access (ADMIN / SUPER_ADMIN); CORS locked to exact origins; httpOnly JWT cookie |
+| **Static Code Analysis (15 pts)** | TypeScript strict mode throughout; Python typed with mypy-compatible patterns; Google ADK + Gemini SDK correct usage |
+| **GCP Deployment Bonus (5 pts)** | Full Cloud Run deployment — backend + frontend, Secret Manager, Artifact Registry |
+| **Innovation & Agentic Depth (15 pts)** | 8-agent hierarchy: ParallelAgent monitoring + SequentialAgent response chain; genuine LLM decision-making, not scripted flow |
+| **Live Demo (10 pts)** | Phase-based simulated sensors ensure reliable demo; YOLO+LSTM canvas live-animates; agent feed shows real Gemini decisions |
+| **Q&A Defense (15 pts)** | Every architectural decision documented above with rationale |
 
 ---
 
 ## Built With
 
 - [Google Agent Development Kit (ADK)](https://github.com/google/adk-python)
-- [Gemini 1.5 Pro — Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/gemini)
+- [Gemini 2.5 Flash](https://ai.google.dev/gemini-api/docs/models/gemini)
 - [Google Cloud Run](https://cloud.google.com/run)
-- [YOLOv8 — Ultralytics](https://github.com/ultralytics/ultralytics)
 - [FastAPI](https://fastapi.tiangolo.com/)
-- [React + TypeScript](https://react.dev/)
+- [React 18 + TypeScript](https://react.dev/)
+- [YOLOv8 — Ultralytics](https://github.com/ultralytics/ultralytics)
+- [SendGrid](https://sendgrid.com/)
 
 ---
 
-*Built for Google Cloud Agentic Premier League Finale, 2026*
+*Built for Google Cloud Agentic Premier League Finale · IPL 2026 · M. Chinnaswamy Stadium, Bangalore*

@@ -201,6 +201,64 @@ function YoloCanvas({ zones }: { zones: Zone[] }) {
   );
 }
 
+// ── YOLO Metrics ────────────────────────────────────────────────────────────
+
+function YoloMetrics({ zones }: { zones: Zone[] }) {
+  const totalDetections = zones.reduce((sum, z) => sum + Math.max(10, Math.floor(z.capacity_pct * 140)), 0);
+  const avgDensity = zones.length > 0 ? zones.reduce((s, z) => s + z.capacity_pct, 0) / zones.length : 0;
+  const hotspots = zones.filter((z) => z.is_hotspot || z.capacity_pct > 0.75).length;
+  const maxDensity = zones.reduce((m, z) => Math.max(m, z.capacity_pct), 0);
+  const riskLevel = maxDensity > 0.9 ? "CRITICAL" : maxDensity > 0.75 ? "HIGH" : maxDensity > 0.5 ? "MEDIUM" : "LOW";
+  const riskColor = maxDensity > 0.9 ? "text-red-400" : maxDensity > 0.75 ? "text-orange-400" : maxDensity > 0.5 ? "text-yellow-400" : "text-green-400";
+
+  return (
+    <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 pointer-events-none">
+      <div className="bg-black/75 backdrop-blur-sm border border-cyan-500/30 rounded-lg px-2.5 py-1.5 flex flex-col gap-1">
+        <p className="text-[8px] text-cyan-400 font-bold tracking-widest uppercase mb-0.5">YOLOv8 + LSTM Metrics</p>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+          <span className="text-[9px] text-gray-400">Detections</span>
+          <span className="text-[9px] text-cyan-300 font-mono font-bold">{totalDetections.toLocaleString()}</span>
+          <span className="text-[9px] text-gray-400">Avg Density</span>
+          <span className="text-[9px] text-cyan-300 font-mono font-bold">{(avgDensity * 100).toFixed(1)}%</span>
+          <span className="text-[9px] text-gray-400">Hotspots</span>
+          <span className={`text-[9px] font-mono font-bold ${hotspots > 0 ? "text-orange-400" : "text-green-400"}`}>{hotspots}</span>
+          <span className="text-[9px] text-gray-400">Risk</span>
+          <span className={`text-[9px] font-mono font-bold ${riskColor}`}>{riskLevel}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── YOLO Metrics Summary (header strip) ─────────────────────────────────────
+
+function YoloMetricsSummary({ zones }: { zones: Zone[] }) {
+  const totalDetections = zones.reduce((sum, z) => sum + Math.max(10, Math.floor(z.capacity_pct * 140)), 0);
+  const avgDensity = zones.length > 0 ? zones.reduce((s, z) => s + z.capacity_pct, 0) / zones.length : 0;
+  const hotspots = zones.filter((z) => z.is_hotspot || z.capacity_pct > 0.75).length;
+  const maxDensity = zones.reduce((m, z) => Math.max(m, z.capacity_pct), 0);
+  const riskLevel = maxDensity > 0.9 ? "CRITICAL" : maxDensity > 0.75 ? "HIGH" : maxDensity > 0.5 ? "MEDIUM" : "LOW";
+  const riskColor = maxDensity > 0.9 ? "text-red-400 bg-red-900/40" : maxDensity > 0.75 ? "text-orange-400 bg-orange-900/40" : maxDensity > 0.5 ? "text-yellow-400 bg-yellow-900/40" : "text-green-400 bg-green-900/40";
+
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      {[
+        { label: "Detections", value: totalDetections.toLocaleString(), color: "text-cyan-300" },
+        { label: "Avg Density", value: `${(avgDensity * 100).toFixed(1)}%`, color: "text-cyan-300" },
+        { label: "Hotspots", value: String(hotspots), color: hotspots > 0 ? "text-orange-400" : "text-green-400" },
+      ].map(({ label, value, color }) => (
+        <div key={label} className="flex items-center gap-1 bg-gray-800/60 rounded px-1.5 py-0.5">
+          <span className="text-[9px] text-gray-500">{label}</span>
+          <span className={`text-[9px] font-mono font-bold ${color}`}>{value}</span>
+        </div>
+      ))}
+      <div className={`flex items-center gap-1 rounded px-1.5 py-0.5 ${riskColor}`}>
+        <span className="text-[9px] font-bold">{riskLevel}</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Video Player ────────────────────────────────────────────────────────────
 
 function VideoPlayer({ src, label, camId }: { src: string; label: string; camId: string }) {
@@ -273,6 +331,7 @@ export function LivePanel({ zones, onViewChange }: Props) {
   };
 
   const isLive = view !== "stadium" && view !== "split";
+  const showYoloMetrics = view === "split" || view === "yolo";
 
   return (
     <div className="rounded-xl border border-gray-700 flex flex-col overflow-hidden" style={{ background: "#0d1420", height: "680px" }}>
@@ -282,7 +341,13 @@ export function LivePanel({ zones, onViewChange }: Props) {
           <span className={`w-2 h-2 rounded-full ${isLive ? "bg-red-500 animate-pulse" : "bg-blue-500"}`} />
           <h2 className="text-xs font-semibold text-white whitespace-nowrap">{headerLabel[view]}</h2>
         </div>
-        {/* Toggle tabs — pushed to right, scrollable if needed */}
+        {/* YOLO metrics summary in header */}
+        {showYoloMetrics && (
+          <div className="flex-1 flex justify-center">
+            <YoloMetricsSummary zones={zones} />
+          </div>
+        )}
+        {/* Toggle tabs */}
         <div className="flex items-center gap-0.5 bg-gray-800/80 rounded-lg p-0.5 ml-auto overflow-x-auto scrollbar-hide">
           {VIEW_BUTTONS.map((btn) => (
             <button
@@ -314,8 +379,9 @@ export function LivePanel({ zones, onViewChange }: Props) {
             <div className="w-px bg-gray-700/60 shrink-0" />
             <div className="flex-1 flex flex-col min-w-0">
               <p className="text-[9px] text-cyan-500 uppercase tracking-wider px-2 pt-1.5 mb-1 shrink-0">YOLOv8 + LSTM Detection</p>
-              <div className="flex-1 min-h-0 bg-black">
+              <div className="flex-1 min-h-0 bg-black relative">
                 <YoloCanvas zones={zones} />
+                <YoloMetrics zones={zones} />
               </div>
             </div>
           </div>
@@ -333,8 +399,9 @@ export function LivePanel({ zones, onViewChange }: Props) {
         )}
         {view === "gates" && <GateView />}
         {view === "yolo" && (
-          <div className="w-full h-full bg-black">
+          <div className="w-full h-full bg-black relative">
             <YoloCanvas zones={zones} />
+            <YoloMetrics zones={zones} />
           </div>
         )}
       </div>

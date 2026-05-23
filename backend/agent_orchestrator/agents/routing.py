@@ -5,9 +5,11 @@ to optimally redistribute crowd flow across the stadium.
 """
 
 import logging
+import os
 from datetime import datetime
 from typing import Any, Dict, List
 
+import google.generativeai as genai
 from google.adk.agents import LlmAgent
 
 from tools.gate_control import open_gate_tool, close_gate_tool, get_gate_status_tool
@@ -53,6 +55,14 @@ class RoutingAgent:
             instruction=ROUTING_PROMPT,
             tools=[open_gate_tool, close_gate_tool, get_gate_status_tool],
         )
+        # Initialise Gemini for routing rationale generation
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if api_key:
+            genai.configure(api_key=api_key)
+            self._gemini = genai.GenerativeModel(model)
+        else:
+            self._gemini = None
+            logger.warning("GOOGLE_API_KEY not set — agent will use template decisions")
 
     async def decide(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -87,6 +97,20 @@ class RoutingAgent:
         density_reduction = self._estimate_density_reduction(gate_actions, density_meta)
 
         rationale = self._build_rationale(gate_actions, hotspots, bottleneck_gates, peak_density)
+
+        # Call Gemini to validate and enrich routing rationale
+        if self._gemini:
+            try:
+                prompt = (
+                    f"You are a crowd routing expert. Given hotspots={hotspots}, "
+                    f"bottlenecks={bottleneck_gates}, peak_density={peak_density:.1%}. "
+                    f"These gate actions are proposed: {gate_actions}. "
+                    f"Validate and give a 1-2 sentence routing rationale."
+                )
+                response = await self._gemini.generate_content_async(prompt)
+                rationale = response.text.strip()
+            except Exception as e:
+                logger.warning(f"Gemini call failed in RoutingAgent: {e}")
 
         return {
             "agent": "routing",

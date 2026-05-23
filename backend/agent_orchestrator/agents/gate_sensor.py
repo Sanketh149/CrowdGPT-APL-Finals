@@ -5,10 +5,12 @@ and flags gates that are overwhelmed or under-utilised.
 """
 
 import logging
+import os
 import random
 from datetime import datetime
 from typing import Any, Dict, List
 
+import google.generativeai as genai
 from google.adk.agents import LlmAgent
 
 from tools.sensor_tools import get_zone_density_tool
@@ -84,6 +86,14 @@ class GateSensorAgent:
             instruction=GATE_SENSOR_PROMPT,
             tools=[get_gate_status_tool, get_zone_density_tool],
         )
+        # Initialise Gemini for recommendation generation
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if api_key:
+            genai.configure(api_key=api_key)
+            self._gemini = genai.GenerativeModel(model)
+        else:
+            self._gemini = None
+            logger.warning("GOOGLE_API_KEY not set — agent will use template decisions")
 
     async def analyze(self, context: Dict[str, Any]) -> Dict[str, Any]:
         phase = context.get("phase", "mid_match")
@@ -108,6 +118,20 @@ class GateSensorAgent:
             recommendation = self._build_recommendation(
                 bottlenecks, underutilised, total_inflow, phase
             )
+
+            # Call Gemini for a routing recommendation
+            if self._gemini:
+                try:
+                    prompt = (
+                        f"You are a stadium gate analyst. Given these gate readings: "
+                        f"bottlenecks={bottlenecks}, underutilised={underutilised}, "
+                        f"total_inflow={total_inflow}ppm. "
+                        f"Give a 1-2 sentence routing recommendation."
+                    )
+                    response = await self._gemini.generate_content_async(prompt)
+                    recommendation = response.text.strip()
+                except Exception as e:
+                    logger.warning(f"Gemini call failed in GateSensorAgent: {e}")
 
             decision_text = (
                 f"{len(bottlenecks)} bottleneck(s) detected — "

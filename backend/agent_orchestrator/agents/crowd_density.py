@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List
 
+import google.generativeai as genai
 from google.adk.agents import LlmAgent
 
 from tools.sensor_tools import get_zone_density_tool, get_historical_density_tool
@@ -66,6 +67,21 @@ class CrowdDensityAgent:
             instruction=CROWD_DENSITY_PROMPT,
             tools=[get_zone_density_tool, get_historical_density_tool],
         )
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if api_key:
+            genai.configure(api_key=api_key)
+            self._gemini = genai.GenerativeModel(model)
+        else:
+            self._gemini = None
+            logger.warning("GOOGLE_API_KEY not set — CrowdDensityAgent using template decisions")
+        # Initialise Gemini for decision generation
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if api_key:
+            genai.configure(api_key=api_key)
+            self._gemini = genai.GenerativeModel(model)
+        else:
+            self._gemini = None
+            logger.warning("GOOGLE_API_KEY not set — agent will use template decisions")
 
     async def analyze(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -83,10 +99,30 @@ class CrowdDensityAgent:
 
             recommendation = self._generate_recommendation(peak_density, hotspots, phase)
 
+            # Call Gemini for operator decision text
+            zone_data_summary = (
+                f"Phase: {phase}. Peak density: {peak_density:.1%}. "
+                f"Hotspots: {', '.join(hotspots) or 'none'}. "
+                f"Zones: " + ", ".join(
+                    f"{z['zone_id']}={z['capacity_pct']:.0%}" for z in zone_data
+                )
+            )
+            decision_text = f"Peak density {peak_density:.1%} — {len(hotspots)} hotspot(s) detected"
+            if self._gemini:
+                try:
+                    prompt = (
+                        f"Analyze this stadium crowd density data and give a 1-2 sentence operator decision:\n"
+                        f"{zone_data_summary}"
+                    )
+                    response = await self._gemini.generate_content_async(prompt)
+                    decision_text = response.text.strip()
+                except Exception as e:
+                    logger.warning(f"Gemini call failed in CrowdDensityAgent: {e}")
+
             return {
                 "agent": "crowd_density",
                 "timestamp": timestamp,
-                "decision": f"Peak density {peak_density:.1%} — {len(hotspots)} hotspot(s) detected",
+                "decision": decision_text,
                 "confidence": 0.92,
                 "metadata": {
                     "zones": zone_data,

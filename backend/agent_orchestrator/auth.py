@@ -7,8 +7,11 @@ import os
 from datetime import datetime, timedelta
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import HTTPException, Request, status
 from jose import JWTError, jwt
+
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 logger = logging.getLogger(__name__)
 

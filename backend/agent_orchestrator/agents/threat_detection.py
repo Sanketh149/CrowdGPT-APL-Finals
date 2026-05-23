@@ -10,6 +10,7 @@ import sys
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+import google.generativeai as genai
 from google.adk.agents import LlmAgent
 
 from tools.sensor_tools import get_zone_density_tool
@@ -68,6 +69,14 @@ class ThreatDetectionAgent:
             tools=[get_zone_density_tool],
         )
         self._ml_model = None
+        # Initialise Gemini for threat assessment generation
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if api_key:
+            genai.configure(api_key=api_key)
+            self._gemini = genai.GenerativeModel(model)
+        else:
+            self._gemini = None
+            logger.warning("GOOGLE_API_KEY not set — agent will use template decisions")
 
     def _load_ml_model(self):
         """Lazy-load the PyTorch LSTM model."""
@@ -130,10 +139,34 @@ class ThreatDetectionAgent:
             density_score, gate_score, acceleration_score, weather_score
         )
 
+        threat_summary = self._threat_summary(risk_score, anomalies)
+        decision_text = f"Risk score {risk_score}/100 — level: {risk_level}"
+
+        # Call Gemini for threat assessment
+        if self._gemini:
+            try:
+                anomaly_desc = "; ".join(
+                    f"{a['type']} in {a['zone']}" for a in anomalies
+                ) or "none"
+                top_factors_desc = ", ".join(
+                    f"{f['factor']}={f['score']}" for f in top_factors
+                )
+                prompt = (
+                    f"You are a crowd safety threat analyst. Risk score: {risk_score}/100, "
+                    f"level: {risk_level}. Anomalies: {anomaly_desc}. "
+                    f"Top factors: {top_factors_desc}. "
+                    f"Write a 2-3 sentence threat assessment for the operator."
+                )
+                response = await self._gemini.generate_content_async(prompt)
+                threat_summary = response.text.strip()
+                decision_text = threat_summary
+            except Exception as e:
+                logger.warning(f"Gemini call failed in ThreatDetectionAgent: {e}")
+
         return {
             "agent": "threat_detection",
             "timestamp": timestamp,
-            "decision": f"Risk score {risk_score}/100 — level: {risk_level}",
+            "decision": decision_text,
             "confidence": 0.87,
             "metadata": {
                 "risk_score": risk_score,
@@ -147,7 +180,7 @@ class ThreatDetectionAgent:
                     "acceleration": round(acceleration_score, 1),
                     "weather": round(weather_score, 1),
                 },
-                "threat_summary": self._threat_summary(risk_score, anomalies),
+                "threat_summary": threat_summary,
             },
         }
 

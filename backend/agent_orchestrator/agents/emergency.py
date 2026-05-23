@@ -5,9 +5,11 @@ Activates predefined emergency protocols based on threat assessment.
 """
 
 import logging
+import os
 from datetime import datetime
 from typing import Any, Dict, List
 
+import google.generativeai as genai
 from google.adk.agents import LlmAgent
 
 from tools.alert_tools import dispatch_alert_tool, get_active_alerts_tool
@@ -120,6 +122,14 @@ class EmergencyProtocolAgent:
             instruction=EMERGENCY_PROMPT,
             tools=[dispatch_alert_tool, open_gate_tool, get_active_alerts_tool],
         )
+        # Initialise Gemini for PA and staff instruction generation
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if api_key:
+            genai.configure(api_key=api_key)
+            self._gemini = genai.GenerativeModel(model)
+        else:
+            self._gemini = None
+            logger.warning("GOOGLE_API_KEY not set — agent will use template decisions")
 
     async def activate(self, state: Dict[str, Any]) -> Dict[str, Any]:
         timestamp = datetime.utcnow().isoformat()
@@ -153,6 +163,28 @@ class EmergencyProtocolAgent:
             "staff_instructions": playbook["staff_instructions"],
             "monitoring_interval_sec": playbook["monitoring_interval_sec"],
         }
+
+        # Call Gemini to generate contextual PA and staff instructions
+        if self._gemini:
+            try:
+                prompt = (
+                    f"You are an emergency coordinator. Protocol: {protocol}, "
+                    f"risk score: {risk_score}/100, zones affected: {zones_affected}. "
+                    f"Write: 1) a 1-sentence public PA announcement (calm, clear), "
+                    f"2) a 1-sentence field staff instruction. "
+                    f"Format: PA: ...\nSTAFF: ..."
+                )
+                response = await self._gemini.generate_content_async(prompt)
+                response_text = response.text.strip()
+                # Parse PA and STAFF lines
+                for line in response_text.splitlines():
+                    line = line.strip()
+                    if line.upper().startswith("PA:"):
+                        activation_record["public_announcement"] = line[3:].strip()
+                    elif line.upper().startswith("STAFF:"):
+                        activation_record["staff_instructions"] = line[6:].strip()
+            except Exception as e:
+                logger.warning(f"Gemini call failed in EmergencyProtocolAgent: {e}")
 
         logger.info(
             f"Emergency protocol activated: {protocol} (risk={risk_score}, "

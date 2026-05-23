@@ -58,7 +58,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 class RunRequest(BaseModel):
     match_id: str = "IPL_2026_FINAL"
-    stadium_id: str = "narendra_modi_stadium"
+    stadium_id: str = "chinnaswamy_stadium"
     phase: str = "mid_match"  # pre_match | match_start | mid_match | post_match
     trigger: str = "scheduled"  # scheduled | manual | alert
     override_data: Optional[Dict[str, Any]] = None
