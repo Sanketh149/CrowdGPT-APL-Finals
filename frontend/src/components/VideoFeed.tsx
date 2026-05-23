@@ -12,23 +12,52 @@ interface Person {
   vy: number;
   zone: string;
   size: number;
+  wobble: number;
+  wobbleSpeed: number;
 }
 
-const CANVAS_ZONES: Record<string, { x: number; y: number; w: number; h: number }> = {
-  north_stand:  { x: 150, y: 10,  w: 300, h: 90  },
-  south_stand:  { x: 150, y: 340, w: 300, h: 90  },
-  east_stand:   { x: 470, y: 120, w: 120, h: 200 },
-  west_stand:   { x: 10,  y: 120, w: 120, h: 200 },
-  vip_pavilion: { x: 200, y: 155, w: 200, h: 130 },
-  media_center: { x: 230, y: 100, w: 140, h: 50  },
+// Viewport: 600×320 internal canvas coords
+const CVW = 600;
+const CVH = 320;
+
+const ZONE_LAYOUT: Record<string, { x: number; y: number; w: number; h: number }> = {
+  north_stand:  { x: 140, y: 8,   w: 220, h: 60  },
+  south_stand:  { x: 140, y: 248, w: 220, h: 60  },
+  east_stand:   { x: 438, y: 82,  w: 80,  h: 144 },
+  west_stand:   { x: 8,   y: 82,  w: 80,  h: 144 },
+  vip_pavilion: { x: 185, y: 108, w: 130, h: 90  },
+  media_center: { x: 196, y: 66,  w: 110, h: 36  },
 };
 
-function densityColor(pct: number): [number, number, number] {
+function densityRGB(pct: number): [number, number, number] {
   if (pct > 0.90) return [239, 68, 68];
   if (pct > 0.75) return [249, 115, 22];
   if (pct > 0.60) return [234, 179, 8];
   if (pct > 0.40) return [132, 204, 22];
   return [34, 197, 94];
+}
+
+function buildPersons(zones: Zone[]): Person[] {
+  const out: Person[] = [];
+  zones.forEach((zone) => {
+    const l = ZONE_LAYOUT[zone.zone_id];
+    if (!l) return;
+    // More people: up to 120 dots at full capacity
+    const count = Math.max(8, Math.floor(zone.capacity_pct * 120));
+    for (let i = 0; i < count; i++) {
+      out.push({
+        x: l.x + 3 + Math.random() * (l.w - 6),
+        y: l.y + 3 + Math.random() * (l.h - 6),
+        vx: (Math.random() - 0.5) * 0.08,   // very slow
+        vy: (Math.random() - 0.5) * 0.08,
+        zone: zone.zone_id,
+        size: 1.2 + Math.random() * 1.4,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.005 + Math.random() * 0.01,
+      });
+    }
+  });
+  return out;
 }
 
 export function VideoFeed({ zones }: Props) {
@@ -41,24 +70,8 @@ export function VideoFeed({ zones }: Props) {
   useEffect(() => { zonesRef.current = zones; }, [zones]);
 
   useEffect(() => {
-    const persons: Person[] = [];
-    zones.forEach((zone) => {
-      const layout = CANVAS_ZONES[zone.zone_id];
-      if (!layout) return;
-      const count = Math.max(4, Math.floor(zone.capacity_pct * 50));
-      for (let i = 0; i < count; i++) {
-        persons.push({
-          x: layout.x + 4 + Math.random() * (layout.w - 8),
-          y: layout.y + 4 + Math.random() * (layout.h - 8),
-          vx: (Math.random() - 0.5) * 0.4,
-          vy: (Math.random() - 0.5) * 0.4,
-          zone: zone.zone_id,
-          size: 1.5 + Math.random() * 1.5,
-        });
-      }
-    });
-    personsRef.current = persons;
-  }, []);
+    personsRef.current = buildPersons(zones);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -66,153 +79,255 @@ export function VideoFeed({ zones }: Props) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const W = canvas.width;
-    const H = canvas.height;
-    const sx = W / 600;
-    const sy = H / 440;
+    const CW = canvas.width;   // actual canvas px
+    const CH = canvas.height;
+    const sx = CW / CVW;
+    const sy = CH / CVH;
 
-    const draw = () => {
-      frameRef.current++;
-      const f = frameRef.current;
-      const zoneMap = Object.fromEntries(zonesRef.current.map((z) => [z.zone_id, z]));
+    // half-width for split
+    const HW = CW / 2;
 
-      // Background
-      ctx.fillStyle = "#060b14";
-      ctx.fillRect(0, 0, W, H);
+    const drawBackground = (clipX: number, clipW: number) => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(clipX, 0, clipW, CH);
+      ctx.clip();
 
-      // Scanlines
-      for (let y = 0; y < H; y += 4) {
-        ctx.fillStyle = "rgba(0,0,0,0.15)";
-        ctx.fillRect(0, y, W, 1);
+      // Dark bg
+      ctx.fillStyle = "#06101c";
+      ctx.fillRect(clipX, 0, clipW, CH);
+
+      // Subtle grain
+      for (let i = 0; i < 300; i++) {
+        const gx = clipX + Math.random() * clipW;
+        const gy = Math.random() * CH;
+        ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.025})`;
+        ctx.fillRect(gx, gy, 1, 1);
       }
 
-      // Zone heatmap overlays
-      Object.entries(CANVAS_ZONES).forEach(([zoneId, l]) => {
+      // Scanlines
+      for (let y = 0; y < CH; y += 3) {
+        ctx.fillStyle = "rgba(0,0,0,0.12)";
+        ctx.fillRect(clipX, y, clipW, 1);
+      }
+
+      ctx.restore();
+    };
+
+    const drawZoneOverlays = (clipX: number, clipW: number, showBoxes: boolean) => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(clipX, 0, clipW, CH);
+      ctx.clip();
+
+      const zoneMap = Object.fromEntries(zonesRef.current.map((z) => [z.zone_id, z]));
+
+      Object.entries(ZONE_LAYOUT).forEach(([zoneId, l]) => {
         const z = zoneMap[zoneId];
         const pct = z?.capacity_pct ?? 0;
-        const [r, g, b] = densityColor(pct);
+        const [r, g, b] = densityRGB(pct);
         const x = l.x * sx, y = l.y * sy, w = l.w * sx, h = l.h * sy;
 
-        const grad = ctx.createRadialGradient(x + w / 2, y + h / 2, 0, x + w / 2, y + h / 2, Math.max(w, h) * 0.6);
-        grad.addColorStop(0, `rgba(${r},${g},${b},${0.15 + pct * 0.2})`);
-        grad.addColorStop(1, `rgba(${r},${g},${b},0.02)`);
+        // Heatmap glow
+        const grad = ctx.createRadialGradient(x + w / 2, y + h / 2, 0, x + w / 2, y + h / 2, Math.max(w, h) * 0.65);
+        grad.addColorStop(0, `rgba(${r},${g},${b},${0.12 + pct * 0.18})`);
+        grad.addColorStop(1, `rgba(${r},${g},${b},0.01)`);
         ctx.fillStyle = grad;
         ctx.beginPath();
-        (ctx as any).roundRect?.(x, y, w, h, 6) ?? ctx.rect(x, y, w, h);
+        ctx.roundRect(x, y, w, h, 5);
         ctx.fill();
 
-        ctx.strokeStyle = `rgba(${r},${g},${b},${0.3 + pct * 0.3})`;
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
+        if (showBoxes) {
+          // YOLO zone outline
+          ctx.strokeStyle = `rgba(${r},${g},${b},${0.5 + pct * 0.3})`;
+          ctx.lineWidth = 0.8;
+          ctx.setLineDash([4, 3]);
+          ctx.beginPath();
+          ctx.roundRect(x, y, w, h, 5);
+          ctx.stroke();
+          ctx.setLineDash([]);
 
-        // Zone label
-        ctx.fillStyle = `rgba(${r},${g},${b},0.9)`;
-        ctx.font = `bold ${7 * sx}px monospace`;
-        ctx.textAlign = "center";
-        ctx.fillText(`${(pct * 100).toFixed(0)}%`, (x + w / 2), y + h - 4 * sy);
+          // Density label
+          ctx.fillStyle = `rgba(${r},${g},${b},0.95)`;
+          ctx.font = `bold ${6.5 * Math.min(sx, 1)}px monospace`;
+          ctx.textAlign = "right";
+          ctx.fillText(`${(pct * 100).toFixed(0)}%`, x + w - 3, y + h - 3);
+        }
       });
 
       // Outfield
-      ctx.fillStyle = "rgba(16, 68, 36, 0.5)";
+      ctx.fillStyle = "rgba(12,60,28,0.55)";
       ctx.beginPath();
-      ctx.ellipse(300 * sx, 220 * sy, 115 * sx, 88 * sy, 0, 0, Math.PI * 2);
+      ctx.ellipse(250 * sx, 160 * sy, 95 * sx, 72 * sy, 0, 0, Math.PI * 2);
       ctx.fill();
 
       // Pitch
-      const pitchGrad = ctx.createRadialGradient(300 * sx, 220 * sy, 0, 300 * sx, 220 * sy, 60 * sx);
-      pitchGrad.addColorStop(0, "rgba(21,128,61,0.8)");
-      pitchGrad.addColorStop(1, "rgba(16,68,36,0.6)");
-      ctx.fillStyle = pitchGrad;
+      const pg = ctx.createRadialGradient(250 * sx, 160 * sy, 0, 250 * sx, 160 * sy, 48 * sx);
+      pg.addColorStop(0, "rgba(21,128,61,0.85)");
+      pg.addColorStop(1, "rgba(12,60,28,0.5)");
+      ctx.fillStyle = pg;
       ctx.beginPath();
-      ctx.ellipse(300 * sx, 220 * sy, 60 * sx, 45 * sy, 0, 0, Math.PI * 2);
+      ctx.ellipse(250 * sx, 160 * sy, 48 * sx, 36 * sy, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "rgba(34,197,94,0.4)";
+      ctx.strokeStyle = "rgba(34,197,94,0.3)";
       ctx.lineWidth = 0.5;
       ctx.stroke();
 
-      // Persons
+      ctx.restore();
+    };
+
+    const drawPersons = (clipX: number, clipW: number, yolo: boolean, frame: number) => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(clipX, 0, clipW, CH);
+      ctx.clip();
+
+      const zoneMap = Object.fromEntries(zonesRef.current.map((z) => [z.zone_id, z]));
       const persons = personsRef.current;
-      persons.forEach((p) => {
-        const l = CANVAS_ZONES[p.zone];
+
+      persons.forEach((p, idx) => {
+        const l = ZONE_LAYOUT[p.zone];
         if (!l) return;
-        p.x += p.vx;
-        p.y += p.vy;
-        if (p.x < l.x + 2 || p.x > l.x + l.w - 2) p.vx *= -1;
-        if (p.y < l.y + 2 || p.y > l.y + l.h - 2) p.vy *= -1;
+
+        // Update position (only on left panel to avoid double-update)
+        if (!yolo) {
+          p.wobble += p.wobbleSpeed;
+          p.x += p.vx + Math.sin(p.wobble) * 0.04;
+          p.y += p.vy + Math.cos(p.wobble * 0.7) * 0.03;
+          if (p.x < l.x + 2) { p.x = l.x + 2; p.vx = Math.abs(p.vx); }
+          if (p.x > l.x + l.w - 2) { p.x = l.x + l.w - 2; p.vx = -Math.abs(p.vx); }
+          if (p.y < l.y + 2) { p.y = l.y + 2; p.vy = Math.abs(p.vy); }
+          if (p.y > l.y + l.h - 2) { p.y = l.y + l.h - 2; p.vy = -Math.abs(p.vy); }
+        }
 
         const z = zoneMap[p.zone];
         const pct = z?.capacity_pct ?? 0;
-        const [r, g, b] = densityColor(pct);
+        const [r, g, b] = densityRGB(pct);
+        const px = p.x * sx;
+        const py = p.y * sy;
 
-        ctx.beginPath();
-        ctx.arc(p.x * sx, p.y * sy, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${r},${g},${b},0.85)`;
-        ctx.fill();
+        if (yolo) {
+          // YOLO view: brighter dots
+          ctx.beginPath();
+          ctx.arc(px, py, p.size * 1.1, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${r},${g},${b},0.9)`;
+          ctx.fill();
+
+          // Detection box on ~every 10th person, cycling
+          const slot = Math.floor((frame * 0.5 + idx * 7.3) % persons.length);
+          if (idx === slot || idx === (slot + 17) % persons.length || idx === (slot + 41) % persons.length) {
+            const bw = (p.size * 6) * sx;
+            const bh = (p.size * 9) * sy;
+            ctx.strokeStyle = "rgba(34,211,238,0.8)";
+            ctx.lineWidth = 0.7;
+            ctx.strokeRect(px - bw / 2, py - bh * 0.6, bw, bh);
+            // Confidence label
+            const conf = 0.78 + Math.sin(frame * 0.04 + idx) * 0.12;
+            ctx.fillStyle = "rgba(34,211,238,0.9)";
+            ctx.font = `${5 * Math.min(sx, 1)}px monospace`;
+            ctx.textAlign = "left";
+            ctx.fillText(`${conf.toFixed(2)}`, px - bw / 2 + 1, py - bh * 0.6 - 1.5);
+          }
+        } else {
+          // Raw view: softer dots with slight blur
+          const rg = ctx.createRadialGradient(px, py, 0, px, py, p.size * 2.5);
+          rg.addColorStop(0, `rgba(${r},${g},${b},0.7)`);
+          rg.addColorStop(1, `rgba(${r},${g},${b},0)`);
+          ctx.fillStyle = rg;
+          ctx.beginPath();
+          ctx.arc(px, py, p.size * 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
       });
 
-      // YOLO detection boxes — cycle through persons slowly
-      const boxSlots = Math.min(8, Math.floor(persons.length / 6));
-      ctx.font = `${5.5 * sx}px monospace`;
-      for (let i = 0; i < boxSlots; i++) {
-        const idx = Math.floor((f * 0.7 + i * 23) % persons.length);
-        const p = persons[idx];
-        if (!p) continue;
-        const bx = (p.x - 5) * sx;
-        const by = (p.y - 8) * sy;
-        const bw = 10 * sx;
-        const bh = 14 * sy;
-        const conf = 0.82 + Math.sin(f * 0.03 + i) * 0.1;
-        ctx.strokeStyle = "rgba(34,211,238,0.75)";
-        ctx.lineWidth = 0.7;
-        ctx.strokeRect(bx, by, bw, bh);
-        ctx.fillStyle = "rgba(34,211,238,0.85)";
-        ctx.textAlign = "left";
-        ctx.fillText(`${(conf).toFixed(2)}`, bx, by - 1.5 * sy);
-      }
+      ctx.restore();
+    };
 
-      // Corner brackets (camera overlay style)
-      const bracketSize = 12;
-      ctx.strokeStyle = "rgba(34,211,238,0.4)";
-      ctx.lineWidth = 1.5;
-      const corners = [[0,0],[W,0],[0,H],[W,H]];
-      corners.forEach(([cx, cy]) => {
-        const dx = cx === 0 ? 1 : -1;
-        const dy = cy === 0 ? 1 : -1;
+    const drawOverlayUI = (clipX: number, clipW: number, label: string, frame: number, yolo: boolean) => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(clipX, 0, clipW, CH);
+      ctx.clip();
+
+      // Corner brackets
+      const bs = 10;
+      ctx.strokeStyle = yolo ? "rgba(34,211,238,0.5)" : "rgba(255,255,255,0.2)";
+      ctx.lineWidth = 1.2;
+      [[clipX + 4, 4], [clipX + clipW - 4, 4], [clipX + 4, CH - 4], [clipX + clipW - 4, CH - 4]].forEach(([cx, cy], i) => {
+        const dx = i % 2 === 0 ? 1 : -1;
+        const dy = i < 2 ? 1 : -1;
         ctx.beginPath();
-        ctx.moveTo(cx + dx * bracketSize, cy);
-        ctx.lineTo(cx, cy);
-        ctx.lineTo(cx, cy + dy * bracketSize);
+        ctx.moveTo(cx + dx * bs, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, cy + dy * bs);
         ctx.stroke();
       });
 
-      // LIVE indicator
-      ctx.fillStyle = "rgba(0,0,0,0.55)";
-      ctx.fillRect(6, 5, 50, 14);
-      const livePulse = Math.sin(f * 0.06) > 0;
-      ctx.beginPath();
-      ctx.arc(13, 12, 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = livePulse ? "rgba(239,68,68,1)" : "rgba(239,68,68,0.4)";
-      ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.font = `bold ${7 * sx}px sans-serif`;
-      ctx.textAlign = "left";
-      ctx.fillText("LIVE", 19, 14);
-
-      // Stats bar bottom
+      // Panel label top-left
       ctx.fillStyle = "rgba(0,0,0,0.6)";
-      ctx.fillRect(0, H - 16, W, 16);
-      ctx.fillStyle = "rgba(34,211,238,0.7)";
-      ctx.font = `${6.5 * sx}px monospace`;
+      ctx.fillRect(clipX + 6, 5, 56, 13);
+      ctx.fillStyle = yolo ? "rgba(34,211,238,0.95)" : "rgba(255,255,255,0.7)";
+      ctx.font = `bold ${6.5 * Math.min(sx, 1)}px monospace`;
       ctx.textAlign = "left";
-      ctx.fillText(`YOLOv8n · ${persons.length} persons · LSTM anomaly: OFF`, 6, H - 5);
-      ctx.textAlign = "right";
-      ctx.fillStyle = "rgba(255,255,255,0.4)";
-      ctx.fillText(`${(29.8 + Math.sin(f * 0.02) * 0.4).toFixed(1)} fps`, W - 6, H - 5);
+      ctx.fillText(label, clipX + 9, 14);
 
-      animRef.current = requestAnimationFrame(draw);
+      // LIVE dot (left panel only)
+      if (!yolo) {
+        const pulse = Math.sin(frame * 0.07) > 0;
+        ctx.beginPath();
+        ctx.arc(clipX + 8, 25, 3, 0, Math.PI * 2);
+        ctx.fillStyle = pulse ? "rgba(239,68,68,1)" : "rgba(239,68,68,0.35)";
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.font = `bold ${6 * Math.min(sx, 1)}px sans-serif`;
+        ctx.fillText("LIVE", clipX + 13, 28);
+      }
+
+      // Bottom stats bar
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      ctx.fillRect(clipX, CH - 15, clipW, 15);
+      ctx.fillStyle = yolo ? "rgba(34,211,238,0.7)" : "rgba(160,160,160,0.6)";
+      ctx.font = `${5.8 * Math.min(sx, 1)}px monospace`;
+      ctx.textAlign = "left";
+      const totalPersons = personsRef.current.length;
+      ctx.fillText(
+        yolo ? `YOLOv8n · ${totalPersons} detections · ${(29.5 + Math.sin(frame * 0.02) * 0.5).toFixed(1)}fps` : `RAW · CAM-01 · Stadium Overview`,
+        clipX + 5, CH - 5
+      );
+
+      ctx.restore();
     };
 
-    animRef.current = requestAnimationFrame(draw);
+    const render = () => {
+      const f = frameRef.current++;
+      const CW2 = canvas.width;
+      const CH2 = canvas.height;
+      const HW2 = CW2 / 2;
+
+      // Left: raw feed
+      drawBackground(0, HW2);
+      drawZoneOverlays(0, HW2, false);
+      drawPersons(0, HW2, false, f);
+      drawOverlayUI(0, HW2, "RAW FEED", f, false);
+
+      // Right: YOLO
+      drawBackground(HW2, HW2);
+      drawZoneOverlays(HW2, HW2, true);
+      drawPersons(HW2, HW2, true, f);
+      drawOverlayUI(HW2, HW2, "YOLO DETECTION", f, true);
+
+      // Divider line
+      ctx.strokeStyle = "rgba(34,211,238,0.25)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(HW2, 0);
+      ctx.lineTo(HW2, CH2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      animRef.current = requestAnimationFrame(render);
+    };
+
+    animRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animRef.current);
   }, []);
 
@@ -223,16 +338,16 @@ export function VideoFeed({ zones }: Props) {
           <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           <h2 className="text-sm font-semibold text-white">Live Camera Feed</h2>
           <span className="text-[10px] text-cyan-400 bg-cyan-950 border border-cyan-800 px-1.5 py-0.5 rounded font-medium">
-            YOLOv8 + Simulation
+            Raw · YOLO Split
           </span>
         </div>
-        <span className="text-[10px] text-gray-500 font-mono">CAM-01 · Overview</span>
+        <span className="text-[10px] text-gray-500 font-mono">CAM-01 · Narendra Modi Stadium</span>
       </div>
       <div className="flex-1 relative bg-black">
         <canvas
           ref={canvasRef}
-          width={600}
-          height={440}
+          width={900}
+          height={340}
           className="w-full h-full"
           style={{ display: "block" }}
         />
