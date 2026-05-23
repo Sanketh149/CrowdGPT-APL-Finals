@@ -21,12 +21,12 @@ const CVW = 600;
 const CVH = 320;
 
 const ZONE_LAYOUT: Record<string, { x: number; y: number; w: number; h: number }> = {
-  north_stand:  { x: 140, y: 8,   w: 220, h: 60  },
-  south_stand:  { x: 140, y: 248, w: 220, h: 60  },
-  east_stand:   { x: 438, y: 82,  w: 80,  h: 144 },
-  west_stand:   { x: 8,   y: 82,  w: 80,  h: 144 },
-  vip_pavilion: { x: 185, y: 108, w: 130, h: 90  },
-  media_center: { x: 196, y: 66,  w: 110, h: 36  },
+  north_stand:  { x: 148, y: 6,   w: 204, h: 56  },
+  south_stand:  { x: 148, y: 258, w: 204, h: 56  },
+  east_stand:   { x: 432, y: 74,  w: 76,  h: 152 },
+  west_stand:   { x: 8,   y: 74,  w: 76,  h: 152 },
+  vip_pavilion: { x: 90,  y: 102, w: 74,  h: 100 },
+  media_center: { x: 346, y: 102, w: 74,  h: 100 },
 };
 
 function densityRGB(pct: number): [number, number, number] {

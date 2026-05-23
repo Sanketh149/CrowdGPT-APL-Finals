@@ -16,20 +16,22 @@ const SVG_W = 600;
 const SVG_H = 440;
 
 // Pre-defined zone SVG rectangles that approximate a cricket oval stadium
+// Layout: North/South/East/West stands around the perimeter,
+// VIP Pavilion on the west inner-lower, Media Center top-inner strip
 const ZONE_LAYOUT: Record<
   string,
   { x: number; y: number; w: number; h: number; label: string }
 > = {
-  north_stand:  { x: 150, y: 10,  w: 300, h: 90,  label: "North Stand"  },
-  south_stand:  { x: 150, y: 340, w: 300, h: 90,  label: "South Stand"  },
-  east_stand:   { x: 470, y: 120, w: 120, h: 200, label: "East Stand"   },
-  west_stand:   { x: 10,  y: 120, w: 120, h: 200, label: "West Stand"   },
-  vip_pavilion: { x: 200, y: 155, w: 200, h: 130, label: "VIP Pavilion" },
-  media_center: { x: 230, y: 100, w: 140, h: 50,  label: "Media"        },
+  north_stand:  { x: 150, y: 8,   w: 300, h: 80,  label: "North Stand"  },
+  south_stand:  { x: 150, y: 352, w: 300, h: 80,  label: "South Stand"  },
+  east_stand:   { x: 478, y: 110, w: 112, h: 220, label: "East Stand"   },
+  west_stand:   { x: 10,  y: 110, w: 112, h: 220, label: "West Stand"   },
+  vip_pavilion: { x: 130, y: 148, w: 110, h: 144, label: "VIP Pavilion" },
+  media_center: { x: 360, y: 148, w: 110, h: 144, label: "Media Center" },
 };
 
-// Centre pitch ellipse
-const PITCH = { cx: 300, cy: 220, rx: 60, ry: 45 };
+// Centre pitch ellipse — sits in the middle with clear space around it
+const PITCH = { cx: 300, cy: 220, rx: 52, ry: 38 };
 
 // Density colour mapping
 function densityColor(pct: number): string {
@@ -170,15 +172,28 @@ export function StadiumMap({ zones, onZoneClick }: Props) {
         {/* Background */}
         <rect width={SVG_W} height={SVG_H} fill="#111827" rx={12} />
 
-        {/* Pitch / field area */}
+        {/* Outfield (large green oval) */}
         <ellipse
           cx={PITCH.cx}
           cy={PITCH.cy}
-          rx={PITCH.rx + 60}
-          ry={PITCH.ry + 50}
-          fill="#166534"
-          opacity={0.6}
+          rx={108}
+          ry={88}
+          fill="#14532d"
+          opacity={0.5}
         />
+        {/* Boundary circle */}
+        <ellipse
+          cx={PITCH.cx}
+          cy={PITCH.cy}
+          rx={108}
+          ry={88}
+          fill="none"
+          stroke="#16a34a"
+          strokeWidth={1}
+          strokeDasharray="6 4"
+          opacity={0.4}
+        />
+        {/* Inner pitch */}
         <ellipse
           cx={PITCH.cx}
           cy={PITCH.cy}
@@ -187,6 +202,7 @@ export function StadiumMap({ zones, onZoneClick }: Props) {
           fill="#15803d"
           stroke="#22c55e"
           strokeWidth={1}
+          opacity={0.9}
         />
         <text
           x={PITCH.cx}
@@ -209,20 +225,20 @@ export function StadiumMap({ zones, onZoneClick }: Props) {
           />
         ))}
 
-        {/* Gate markers G1-G12 around the perimeter */}
+        {/* Gate markers around the perimeter */}
         {[
-          { id: "G1",  cx: 220, cy: 22  },
-          { id: "G2",  cx: 300, cy: 22  },
-          { id: "G3",  cx: 380, cy: 22  },
-          { id: "G4",  cx: 505, cy: 170 },
-          { id: "G5",  cx: 505, cy: 270 },
-          { id: "G6",  cx: 380, cy: 418 },
-          { id: "G7",  cx: 300, cy: 418 },
-          { id: "G8",  cx: 220, cy: 418 },
-          { id: "G9",  cx: 95,  cy: 270 },
-          { id: "G10", cx: 95,  cy: 170 },
-          { id: "E1",  cx: 155, cy: 60  },
-          { id: "E2",  cx: 445, cy: 60  },
+          { id: "G1",  cx: 220, cy: 20  },
+          { id: "G2",  cx: 300, cy: 20  },
+          { id: "G3",  cx: 380, cy: 20  },
+          { id: "G4",  cx: 508, cy: 168 },
+          { id: "G5",  cx: 508, cy: 272 },
+          { id: "G6",  cx: 380, cy: 420 },
+          { id: "G7",  cx: 300, cy: 420 },
+          { id: "G8",  cx: 220, cy: 420 },
+          { id: "G9",  cx: 92,  cy: 272 },
+          { id: "G10", cx: 92,  cy: 168 },
+          { id: "E1",  cx: 148, cy: 110 },
+          { id: "E2",  cx: 452, cy: 110 },
         ].map(({ id, cx, cy }) => (
           <g key={id}>
             <circle
