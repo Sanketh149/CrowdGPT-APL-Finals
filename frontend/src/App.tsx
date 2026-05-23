@@ -230,6 +230,24 @@ function Dashboard() {
         </div>
       </div>
 
+      {/* Running overlay */}
+      {isRunning && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 pointer-events-none"
+          style={{ background: "rgba(8,14,26,0.65)", backdropFilter: "blur(2px)" }}>
+          <div className="flex flex-col items-center gap-3 px-8 py-6 rounded-2xl border border-blue-700/40"
+            style={{ background: "rgba(15,23,42,0.95)", boxShadow: "0 0 60px rgba(37,99,235,0.2)" }}>
+            <div className="flex items-center gap-2">
+              {["crowd_density","gate_sensor","weather","routing","threat","emergency","notifier"].map((a, i) => (
+                <div key={a} className="w-2 h-2 rounded-full bg-blue-500"
+                  style={{ animation: `pulse 1s ease-in-out ${i * 0.15}s infinite` }} />
+              ))}
+            </div>
+            <p className="text-sm font-semibold text-white">Running Agent Cycle</p>
+            <p className="text-xs text-gray-400">Gemini is analyzing crowd conditions...</p>
+          </div>
+        </div>
+      )}
+
       {/* Main content grid — LivePanel expands to 8 cols in split view */}
       <main className="grid grid-cols-12 gap-2.5 p-2.5">
         <section className={`col-span-12 ${liveView === "split" ? "lg:col-span-7" : "lg:col-span-5"} transition-all`}>
@@ -241,6 +259,7 @@ function Dashboard() {
           <AgentFeed
             decisions={decisions}
             isConnected={isConnected}
+            isRunning={isRunning}
             onClear={clearDecisions}
           />
         </section>

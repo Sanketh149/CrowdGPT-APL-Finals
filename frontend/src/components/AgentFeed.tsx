@@ -10,6 +10,7 @@ import type { AgentDecision } from "../types";
 interface Props {
   decisions: AgentDecision[];
   isConnected: boolean;
+  isRunning?: boolean;
   onClear?: () => void;
 }
 
@@ -83,10 +84,26 @@ function DecisionItem({ decision }: { decision: AgentDecision }) {
   );
 }
 
-export function AgentFeed({ decisions, isConnected, onClear }: Props) {
+function SkeletonCard({ abbr, color, bg }: { abbr: string; color: string; bg: string }) {
+  return (
+    <li className={`flex gap-2.5 px-3 py-2.5 rounded-lg border border-gray-700/50 ${bg} animate-pulse`}>
+      <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center font-bold text-[10px] ${color} border border-current/30`}>
+        {abbr}
+      </div>
+      <div className="flex-1 min-w-0 space-y-1.5 py-0.5">
+        <div className="h-2.5 bg-gray-600/60 rounded w-24" />
+        <div className="h-2 bg-gray-700/60 rounded w-full" />
+        <div className="h-2 bg-gray-700/60 rounded w-3/4" />
+      </div>
+    </li>
+  );
+}
+
+const AGENT_ORDER = ["crowd_density","gate_sensor","weather_context","routing","threat_detection","emergency_protocol","notifier"];
+
+export function AgentFeed({ decisions, isConnected, isRunning, onClear }: Props) {
   const listRef = useRef<HTMLUListElement>(null);
 
-  // No auto-scroll — newest decisions appear at top
   return (
     <div className="bg-gray-800 rounded-xl border border-gray-700 flex flex-col h-full">
       {/* Header */}
@@ -94,15 +111,15 @@ export function AgentFeed({ decisions, isConnected, onClear }: Props) {
         <div className="flex items-center gap-2">
           <span
             className={`w-2 h-2 rounded-full ${
-              isConnected ? "bg-emerald-400 animate-pulse" : "bg-gray-500"
+              isRunning ? "bg-blue-400 animate-pulse" : isConnected ? "bg-emerald-400 animate-pulse" : "bg-gray-500"
             }`}
           />
           <h2 className="text-sm font-semibold text-white">Agent Feed</h2>
           <span className="text-[10px] text-gray-500 bg-gray-700 rounded px-1.5 py-0.5">
-            {decisions.length}
+            {isRunning ? "..." : decisions.length}
           </span>
         </div>
-        {decisions.length > 0 && onClear && (
+        {decisions.length > 0 && !isRunning && onClear && (
           <button
             onClick={onClear}
             className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
@@ -114,7 +131,14 @@ export function AgentFeed({ decisions, isConnected, onClear }: Props) {
 
       {/* Feed list */}
       <div className="flex-1 overflow-y-auto p-2">
-        {decisions.length === 0 ? (
+        {isRunning && decisions.length === 0 ? (
+          <ul className="flex flex-col gap-1.5">
+            {AGENT_ORDER.map((a) => {
+              const cfg = AGENT_CONFIG[a] ?? { color: "text-gray-400", bg: "bg-gray-800/40", abbr: "??" };
+              return <SkeletonCard key={a} abbr={cfg.abbr} color={cfg.color} bg={cfg.bg} />;
+            })}
+          </ul>
+        ) : decisions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-2 py-8">
             <div className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center">
               <span className="text-gray-500 text-lg">🤖</span>

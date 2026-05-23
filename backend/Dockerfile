@@ -4,8 +4,9 @@ FROM python:3.11-slim AS builder
 WORKDIR /build
 
 COPY requirements.txt .
-RUN pip install --upgrade pip && \
-    pip install --prefix=/install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip --no-cache-dir && \
+    pip install --prefix=/install --no-cache-dir --no-compile -r requirements.txt && \
+    find /install -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
 FROM python:3.11-slim AS runtime
