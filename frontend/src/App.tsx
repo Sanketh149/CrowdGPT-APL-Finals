@@ -49,7 +49,7 @@ function PhaseSelector({
 }) {
   return (
     <div className="flex items-center gap-1">
-      <span className="text-[10px] text-gray-500 mr-1">Simulate:</span>
+      <span className="text-[10px] text-gray-500 mr-1">Match Phase:</span>
       {PHASES.map((p) => (
         <button
           key={p}
