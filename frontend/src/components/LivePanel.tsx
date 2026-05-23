@@ -11,11 +11,10 @@ type View = "stadium" | "internal" | "passthrough" | "gates" | "yolo";
 const GCS = "https://storage.googleapis.com/crowdgpt-media-2026/videos";
 
 const VIDEOS = {
-  internal_1:   `${GCS}/internal_stadium_1.mp4`,
-  internal_2:   `${GCS}/internal_stadium_2.mp4`,
-  passthrough:  `${GCS}/passthrough.mp4`,
-  gate_1:       `${GCS}/gate_1.mp4`,
-  gate_2:       `${GCS}/gate_2_video.mp4`,
+  internal:     `${GCS}/passthrough.mp4`,         // internal stadium tracking
+  passthrough:  `${GCS}/gate_1.mp4`,              // people walking on steps
+  gate_1:       `${GCS}/internal_stadium_1.mp4`,  // outside gate 1
+  gate_2:       `${GCS}/internal_stadium_2.mp4`,  // outside gate 2
 };
 
 // ── YOLO Canvas ────────────────────────────────────────────────────────────
@@ -231,12 +230,12 @@ function VideoPlayer({ src, label, camId }: { src: string; label: string; camId:
 
 function GateView() {
   return (
-    <div className="w-full h-full flex flex-col gap-0.5 bg-black">
+    <div className="w-full h-full flex gap-0.5 bg-black">
       <div className="flex-1 relative">
-        <VideoPlayer src={VIDEOS.gate_1} label="Gate Entrance — North Entry" camId="GATE-01" />
+        <VideoPlayer src={VIDEOS.gate_1} label="Gate 1 — North Entry" camId="GATE-01" />
       </div>
       <div className="flex-1 relative">
-        <VideoPlayer src={VIDEOS.gate_2} label="Gate Entrance — South Entry" camId="GATE-02" />
+        <VideoPlayer src={VIDEOS.gate_2} label="Gate 2 — South Entry" camId="GATE-02" />
       </div>
     </div>
   );
@@ -302,17 +301,10 @@ export function LivePanel({ zones }: Props) {
           </div>
         )}
         {view === "internal" && (
-          <div className="w-full h-full flex gap-0.5 bg-black">
-            <div className="flex-1">
-              <VideoPlayer src={VIDEOS.internal_1} label="Internal Overview — Stand A" camId="INT-01" />
-            </div>
-            <div className="flex-1">
-              <VideoPlayer src={VIDEOS.internal_2} label="Internal Overview — Stand B" camId="INT-02" />
-            </div>
-          </div>
+          <VideoPlayer src={VIDEOS.internal} label="Internal Stadium — Crowd Tracking" camId="INT-01" />
         )}
         {view === "passthrough" && (
-          <VideoPlayer src={VIDEOS.passthrough} label="Ticket Verification — Main Entry" camId="PASS-01" />
+          <VideoPlayer src={VIDEOS.passthrough} label="Passthrough — Viewers Entering Stadium" camId="PASS-01" />
         )}
         {view === "gates" && <GateView />}
         {view === "yolo" && (
