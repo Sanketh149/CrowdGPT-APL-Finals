@@ -257,11 +257,11 @@ export function LivePanel({ zones }: Props) {
   const [view, setView] = useState<View>("stadium");
 
   const headerLabel: Record<View, string> = {
-    stadium:     "Stadium Capacity Map",
-    internal:    "Internal Stadium — Live Camera",
-    passthrough: "Passthrough — Ticket Verification",
-    gates:       "Gate Cameras — Entry Points",
-    yolo:        "YOLO Detection View",
+    stadium:     "Stadium Map",
+    internal:    "Internal — Live",
+    passthrough: "Passthrough",
+    gates:       "Gate Cameras",
+    yolo:        "YOLO Detection",
   };
 
   const isLive = view !== "stadium";
@@ -269,25 +269,25 @@ export function LivePanel({ zones }: Props) {
   return (
     <div className="rounded-xl border border-gray-700 flex flex-col overflow-hidden" style={{ background: "#0d1420", height: "700px" }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700/60 shrink-0">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-700/60 shrink-0 min-w-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <span className={`w-2 h-2 rounded-full ${isLive ? "bg-red-500 animate-pulse" : "bg-blue-500"}`} />
-          <h2 className="text-sm font-semibold text-white">{headerLabel[view]}</h2>
+          <h2 className="text-xs font-semibold text-white whitespace-nowrap">{headerLabel[view]}</h2>
         </div>
-        {/* Toggle tabs */}
-        <div className="flex items-center gap-0.5 bg-gray-800/80 rounded-lg p-0.5">
+        {/* Toggle tabs — pushed to right, scrollable if needed */}
+        <div className="flex items-center gap-0.5 bg-gray-800/80 rounded-lg p-0.5 ml-auto overflow-x-auto scrollbar-hide">
           {VIEW_BUTTONS.map((btn) => (
             <button
               key={btn.id}
               onClick={() => setView(btn.id)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-all whitespace-nowrap shrink-0 ${
                 view === btn.id
                   ? "bg-blue-600 text-white shadow"
                   : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
               }`}
             >
               <span>{btn.icon}</span>
-              <span className="hidden sm:inline">{btn.label}</span>
+              <span>{btn.label}</span>
             </button>
           ))}
         </div>
