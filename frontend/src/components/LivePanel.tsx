@@ -213,7 +213,7 @@ function VideoPlayer({ src, label, camId }: { src: string; label: string; camId:
         muted
         loop
         playsInline
-        className="w-full h-full object-contain bg-black"
+        className="w-full h-full object-cover"
       />
       <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/60 px-2 py-1 rounded">
         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -267,7 +267,7 @@ export function LivePanel({ zones }: Props) {
   const isLive = view !== "stadium";
 
   return (
-    <div className="rounded-xl border border-gray-700 flex flex-col h-full overflow-hidden" style={{ background: "#0d1420" }}>
+    <div className="rounded-xl border border-gray-700 flex flex-col overflow-hidden" style={{ background: "#0d1420", height: "700px" }}>
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700/60 shrink-0">
         <div className="flex items-center gap-2">
