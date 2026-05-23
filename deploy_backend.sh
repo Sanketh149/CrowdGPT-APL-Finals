@@ -51,7 +51,7 @@ gcloud run deploy "$BACKEND_SERVICE" \
   --cpu=2 \
   --min-instances=1 \
   --max-instances=10 \
-  --startup-cpu-boost \
+  --cpu-boost \
   --set-env-vars="\
 GOOGLE_API_KEY=${GOOGLE_API_KEY},\
 GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},\
